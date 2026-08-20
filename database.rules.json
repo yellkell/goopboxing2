@@ -1,0 +1,33 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "bouts": {
+      "$code": {
+        ".read": "auth != null && $code.matches(/^[0-9]{4}$/)",
+        ".write": "auth != null && $code.matches(/^[0-9]{4}$/)",
+        ".validate": "newData.hasChild('created') || data.exists()",
+        "created": { ".validate": "newData.isNumber()" },
+        "s0": {
+          "uid": { ".validate": "newData.isString() && newData.val().length < 64" },
+          "name": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "tint": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
+          "t": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "s1": {
+          "uid": { ".validate": "newData.isString() && newData.val().length < 64" },
+          "name": { ".validate": "newData.isString() && newData.val().length <= 12" },
+          "tint": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 8" },
+          "t": { ".validate": "newData.isNumber()" },
+          "$other": { ".validate": false }
+        },
+        "p0": { ".validate": "newData.hasChildren()" },
+        "p1": { ".validate": "newData.hasChildren()" },
+        "e0": { "$ev": { ".validate": "newData.hasChild('t')" } },
+        "e1": { "$ev": { ".validate": "newData.hasChild('t')" } },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

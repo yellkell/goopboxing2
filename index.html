@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>SLUGFEST</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E🥊%3C/text%3E%3C/svg%3E"
+    />
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: #060a06;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #scene-container {
+        position: fixed;
+        inset: 0;
+        width: 100vw;
+        height: 100vh;
+        background:
+          radial-gradient(circle at 28% 22%, rgba(140, 255, 112, 0.14), transparent 30rem),
+          radial-gradient(circle at 74% 72%, rgba(255, 42, 213, 0.1), transparent 26rem),
+          linear-gradient(150deg, #040704 0%, #08130a 55%, #050308 100%);
+      }
+      /* The landing: two blobs squaring up under one marquee. One button.
+         The ring is on the other side of it. */
+      .landing {
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: clamp(20px, 5vh, 42px);
+        padding: clamp(16px, 5vw, 48px);
+        box-sizing: border-box;
+        background: #030503;
+        transition: opacity 0.5s ease;
+      }
+      body.app-entered .landing {
+        opacity: 0;
+        pointer-events: none;
+      }
+      .marquee {
+        text-align: center;
+        user-select: none;
+      }
+      .marquee h1 {
+        margin: 0;
+        font-size: clamp(44px, 11vw, 118px);
+        font-weight: 900;
+        letter-spacing: 0.06em;
+        line-height: 0.95;
+        color: #eaffe2;
+        text-shadow:
+          0 0 18px rgba(140, 255, 112, 0.55),
+          0 0 60px rgba(54, 224, 90, 0.35);
+      }
+      .marquee h1 .vs {
+        color: #ff2ad5;
+        text-shadow:
+          0 0 18px rgba(255, 42, 213, 0.6),
+          0 0 60px rgba(255, 42, 213, 0.3);
+      }
+      .marquee p {
+        margin: 14px 0 0;
+        font-size: clamp(14px, 2.2vw, 19px);
+        letter-spacing: 0.24em;
+        color: rgba(214, 245, 205, 0.6);
+        text-transform: uppercase;
+      }
+      /* Two gel silhouettes, breathing. Pure CSS — the real ones are inside. */
+      .blobs {
+        display: flex;
+        gap: clamp(30px, 9vw, 110px);
+        align-items: flex-end;
+        height: clamp(70px, 15vh, 130px);
+      }
+      .blob {
+        width: clamp(60px, 11vw, 110px);
+        height: clamp(60px, 11vw, 110px);
+        border-radius: 46% 54% 52% 48% / 58% 52% 48% 42%;
+        animation: squish 2.6s ease-in-out infinite;
+        filter: blur(0.5px);
+      }
+      .blob.a {
+        background: radial-gradient(circle at 32% 28%, #b9ff9e, #36e05a 55%, #14602f);
+        box-shadow: 0 0 44px rgba(84, 240, 110, 0.5);
+      }
+      .blob.b {
+        background: radial-gradient(circle at 68% 28%, #ffa1ec, #e034c8 55%, #5c1454);
+        box-shadow: 0 0 44px rgba(255, 62, 220, 0.45);
+        animation-delay: -1.3s;
+      }
+      @keyframes squish {
+        0%,
+        100% {
+          transform: scaleY(1) scaleX(1);
+          border-radius: 46% 54% 52% 48% / 58% 52% 48% 42%;
+        }
+        50% {
+          transform: scaleY(0.82) scaleX(1.14);
+          border-radius: 52% 48% 44% 56% / 46% 44% 56% 54%;
+        }
+      }
+      #enter-vr {
+        appearance: none;
+        border: 0;
+        cursor: pointer;
+        padding: clamp(16px, 2.6vh, 22px) clamp(44px, 8vw, 84px);
+        border-radius: 999px;
+        font-size: clamp(18px, 2.8vw, 26px);
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        color: #08240e;
+        background: linear-gradient(180deg, #a8ff86, #43e668);
+        box-shadow:
+          0 0 24px rgba(120, 255, 140, 0.55),
+          0 8px 40px rgba(50, 220, 90, 0.35);
+        transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.2s ease;
+      }
+      #enter-vr:hover:not([disabled]) {
+        transform: translateY(-2px) scale(1.02);
+        box-shadow:
+          0 0 34px rgba(140, 255, 150, 0.7),
+          0 10px 48px rgba(50, 220, 90, 0.45);
+      }
+      #enter-vr[disabled] {
+        opacity: 0.45;
+        cursor: default;
+      }
+      .fine {
+        font-size: 12.5px;
+        letter-spacing: 0.12em;
+        color: rgba(210, 240, 205, 0.42);
+        text-transform: uppercase;
+        text-align: center;
+        line-height: 1.9;
+      }
+      .fine b {
+        color: rgba(230, 255, 220, 0.66);
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="scene-container"></div>
+    <div class="landing">
+      <div class="blobs">
+        <div class="blob a"></div>
+        <div class="blob b"></div>
+      </div>
+      <div class="marquee">
+        <h1>SLUG<span class="vs">FEST</span></h1>
+        <p>goop versus goop &middot; bare knuckles, no bones</p>
+      </div>
+      <button id="enter-vr">ENTER THE RING</button>
+      <div class="fine">
+        <b>You are the gel.</b> Your hands are its fists.<br />
+        Practice against the house goop, or host a bout and share the four digits.
+      </div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

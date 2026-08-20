@@ -1,0 +1,110 @@
+/**
+ * The creature's body plan — one set of named blob anchors, two shapes.
+ * Vendored from the GOOP lineage unchanged: this file IS the skeleton the
+ * embodiment layer drives, so its indices and rest poses are load-bearing
+ * everywhere (sim chains, arm ladders, the eyes, hit zones).
+ *
+ * The same 20 blobs make up the creature in every mood; only their target
+ * positions and radii change. GLOB packs them into a restless dome of gel;
+ * BOXER stretches them up into a man-sized fighter (head at ~1.75 m).
+ * Because the mapping is 1:1, morphing between the shapes is a plain
+ * per-anchor lerp and the smooth-min surface does the rest: mid-morph the
+ * creature genuinely LOOKS like gel pouring itself into a man.
+ *
+ * Local space: origin on the floor at the creature's centre, +Y up, and the
+ * creature faces +Z (the group is yawed to face the opponent in the world).
+ */
+
+/** Anchor indices — sim, animation, embodiment and eyes all key off these. */
+export const A = {
+  HEAD: 0,
+  NECK: 1,
+  CHEST_L: 2,
+  CHEST_R: 3,
+  BELLY: 4,
+  PELVIS: 5,
+  SHOULDER_L: 6,
+  SHOULDER_R: 7,
+  ELBOW_L: 8,
+  ELBOW_R: 9,
+  FIST_L: 10,
+  FIST_R: 11,
+  HIP_L: 12,
+  HIP_R: 13,
+  KNEE_L: 14,
+  KNEE_R: 15,
+  BASE_L: 16,
+  BASE_R: 17,
+  BASE_F: 18,
+  BASE_B: 19,
+} as const;
+
+export const ANCHOR_COUNT = 20;
+
+/** [x, y, z, radius] per anchor. */
+export type Pose = ReadonlyArray<readonly [number, number, number, number]>;
+
+/**
+ * BOXER — upright guard stance on PROPER LEGS: two columns of gel down to
+ * splayed feet in a southpaw-ish stance (lead foot forward).
+ */
+export const BOXER_POSE: Pose = [
+  [0.0, 1.6, 0.02, 0.155], // HEAD
+  [0.0, 1.42, 0.01, 0.125], // NECK
+  [-0.13, 1.27, 0.02, 0.175], // CHEST_L
+  [0.13, 1.27, 0.02, 0.175], // CHEST_R
+  [0.0, 1.02, 0.03, 0.215], // BELLY
+  [0.0, 0.88, 0.0, 0.185], // PELVIS
+  [-0.27, 1.37, 0.02, 0.125], // SHOULDER_L
+  [0.27, 1.37, 0.02, 0.125], // SHOULDER_R
+  [-0.34, 1.15, 0.18, 0.105], // ELBOW_L
+  [0.34, 1.15, 0.18, 0.105], // ELBOW_R
+  [-0.22, 1.31, 0.38, 0.125], // FIST_L — guard, lead hand a touch higher
+  [0.24, 1.23, 0.34, 0.125], // FIST_R
+  [-0.15, 0.8, 0.0, 0.15], // HIP_L
+  [0.15, 0.8, 0.0, 0.15], // HIP_R
+  [-0.16, 0.45, 0.05, 0.135], // KNEE_L — lead leg slightly forward
+  [0.16, 0.44, -0.02, 0.135], // KNEE_R
+  [-0.18, 0.13, 0.1, 0.145], // BASE_L — lead foot
+  [0.18, 0.12, -0.06, 0.145], // BASE_R — rear foot
+  [-0.14, 0.11, 0.26, 0.125], // BASE_F — lead toes, planted forward
+  [0.2, 0.11, -0.2, 0.125], // BASE_B — rear heel, dug in behind
+];
+
+/**
+ * GLOB — the resting dome. Same blobs slumped into a rough hemisphere,
+ * bigger radii (the mass spreads), nothing where you'd expect anatomy.
+ * Corner-rest mode between rounds, and how a fighter arrives.
+ */
+export const GLOB_POSE: Pose = [
+  [0.0, 0.72, 0.05, 0.17], // HEAD — the crown of the dome
+  [-0.18, 0.58, -0.12, 0.16], // NECK
+  [-0.3, 0.35, 0.12, 0.22], // CHEST_L
+  [0.28, 0.38, 0.1, 0.22], // CHEST_R
+  [0.0, 0.3, 0.0, 0.29], // BELLY — the fat heart of the puddle
+  [0.05, 0.5, -0.18, 0.22], // PELVIS
+  [-0.35, 0.2, -0.18, 0.18], // SHOULDER_L
+  [0.4, 0.22, -0.12, 0.18], // SHOULDER_R
+  [-0.15, 0.2, 0.32, 0.16], // ELBOW_L
+  [0.2, 0.18, 0.3, 0.16], // ELBOW_R
+  [-0.42, 0.25, 0.2, 0.17], // FIST_L
+  [0.45, 0.28, 0.16, 0.17], // FIST_R
+  [-0.2, 0.55, 0.15, 0.15], // HIP_L
+  [0.22, 0.52, 0.18, 0.15], // HIP_R
+  [-0.3, 0.16, -0.3, 0.16], // KNEE_L
+  [0.3, 0.14, -0.32, 0.16], // KNEE_R
+  [-0.45, 0.14, 0.02, 0.19], // BASE_L
+  [0.45, 0.13, 0.0, 0.19], // BASE_R
+  [0.02, 0.13, 0.42, 0.2], // BASE_F
+  [0.0, 0.14, -0.42, 0.2], // BASE_B
+];
+
+/**
+ * PUDDLE — knocked out. Generated from GLOB: everything collapses to ankle
+ * height and spreads ~1.6x wider. The bell rings, the fighter is a doormat.
+ */
+export const PUDDLE_POSE: Pose = GLOB_POSE.map(([x, y, z, r], i) => {
+  void y;
+  const spread = 1.55 + (i % 3) * 0.12;
+  return [x * spread, 0.07 + (i % 4) * 0.015, z * spread, r * 0.88] as const;
+});
