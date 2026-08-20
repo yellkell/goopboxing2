@@ -19,8 +19,9 @@ tints, first-person masking, and a frame-rate-honest sim.
   (infighter / kickboxer / muay thai / outboxer / rope-a-dope), a new
   secret style dealt every round. The stance is the tell.
 - **HOST / JOIN BOUT** — two headsets over Firebase: four-digit rooms,
-  15 Hz pose streams, end-to-end judging (see DESIGN.md). Lights up the
-  moment a Firebase config lands — see **Standing up the Firebase** below.
+  15 Hz pose streams, end-to-end judging (see DESIGN.md). Wired to the
+  project already — see **The Firebase** below for the two console
+  switches it still needs.
 
 Rounds of 90 seconds, three of them, corner rests where both fighters slump
 into breathing globs, a ten count when someone's health hits the mat, and a
@@ -59,25 +60,52 @@ duck with your real knees. The judge is honest:
 
 Menus are lasers: point either controller, pull the trigger.
 
-## Standing up the Firebase
+## The Firebase (project `blastonpickem`)
 
-Online bouts need one Firebase project (free tier is plenty — the whole
-infrastructure is a Realtime Database):
+The web config is already wired into `src/net/firebaseConfig.ts`. The whole
+online infrastructure is one Realtime Database — no relay to deploy, no
+server to run. **Two things still have to be switched on in the console
+before two headsets can meet:**
 
-1. [console.firebase.google.com](https://console.firebase.google.com) →
-   create a project.
-2. **Build → Realtime Database → Create database** (any region; note the
-   URL — it goes in the config as `databaseURL`).
-3. **Build → Authentication → Sign-in method → Anonymous → Enable.**
-4. Deploy the rules: copy `database.rules.json` into the Rules tab (or
-   `firebase deploy --only database` with the CLI).
-5. **Project settings → Your apps → Web app** → register one, copy the
-   config object into `src/net/firebaseConfig.ts` (the file documents the
-   exact shape).
+1. **Anonymous sign-in.** Build → Authentication → Sign-in method →
+   Anonymous → Enable. *(As of writing, the project answers
+   `CONFIGURATION_NOT_FOUND` to an anonymous sign-in, which means
+   Authentication has never been set up on it — this step is not optional:
+   the database rules require an authenticated writer.)*
+2. **The rules.** Paste `database.rules.json` into Realtime Database →
+   Rules → Publish (or `npx firebase deploy --only database`). Without
+   them the database is whatever its default is — either locked (nothing
+   works) or wide open (anyone can scribble in your rooms).
 
-That's the whole handoff: with the config in place, HOST BOUT hands you
-four digits, JOIN BOUT takes them, and the room pairs. The config is
-public by design — the database rules are the security boundary.
+If either is missing, the game now **says so on the lobby card** rather
+than spinning ("enable Anonymous sign-in in the Firebase console",
+"opening the room timed out — is the database reachable?"). Both failure
+paths are covered by the probes.
+
+The config is public by design; the rules are the security boundary.
+
+### Proving it without a cloud round trip
+
+The whole backend runs locally — real SDK, real rules, real transactions
+and presence:
+
+```bash
+npx firebase setup:emulators:database   # one-time: fetch the emulator
+npm run emu                             # terminal 2: rules loaded, ports up
+npm run probe:online                    # terminal 3: two clients, one bout
+```
+
+`npm run probe:online` boots two isolated browsers, hosts and joins with
+the four digits, streams bodies across the ring, lands a punch that the
+receiving client judges with its own gloves, runs the count, and checks
+both verdicts agree. Against the live project instead:
+
+```bash
+LIVE=1 npm run probe:online
+```
+
+(That one needs egress to `*.firebaseio.com`, which some networks — this
+repo's build sandbox included — block outright.)
 
 ## The probes (no headset required)
 
@@ -85,12 +113,17 @@ Every load-bearing law is machine-checked against the REAL modules through
 the dev server (start `npm run dev` first):
 
 ```bash
+npm run probe                 # embody-check + fight-probe (below)
 node tools/embody-check.mjs   # ONE PIECE through a boxing battery, exact
                               # fist pins, first-person eye daylight
 node tools/fight-probe.mjs    # a whole bout: menu → countdown → punches
                               # through the SDF pipeline → KO → verdict,
                               # then the wire loopbacked (mirror math,
                               # victim judging, blocks, state broadcasts)
+npm run probe:online          # TWO browsers over a real Firebase database
+                              # (see "Proving it without a cloud round
+                              # trip" above) — pairing, mirrored bodies,
+                              # a cross-wire punch, the count, the verdict
 node tools/shot.mjs           # style-iteration stills into shots/
 ```
 
@@ -110,7 +143,8 @@ src/
   game/                rng, the 2-seat ring transform
   arena/ audio/ ui/    the stage, the synth kit + techno set, panel kit
   systems/             Player / Fighter / Fight / Arena / Hud / Menu / Network
-tools/                 headless probes (playwright against the dev server)
+tools/                 headless probes + the emulator runner
+database.rules.json    the database's security boundary (deploy this)
 ```
 
 `DESIGN.md` carries the design notes — the embodiment mapping, the judging

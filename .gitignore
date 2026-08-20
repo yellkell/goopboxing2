@@ -4,3 +4,6 @@ dist/
 .DS_Store
 shots/
 .firebase/
+*-debug.log
+database-debug.log
+firebase-debug.log

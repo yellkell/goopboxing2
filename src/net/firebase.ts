@@ -58,13 +58,38 @@ export async function createFirebaseBackend(): Promise<TransportBackend | null> 
   const app: FirebaseApp = getApps()[0] ?? initializeApp(FIREBASE_CONFIG);
   const db: Database = getDatabase(app);
 
-  // Anonymous auth: wanted (the rules can then demand an auth'd writer),
-  // but not fatal — open rules still work without it.
+  // EMULATOR HOOKS (the harness only): `?rtdb=host:port&authemu=host:port`
+  // points the real SDK at the local Firebase emulator suite, so the whole
+  // backend — transactions, presence, rules, the shared clock — is testable
+  // headlessly with the production code path. Production URLs carry no
+  // such params and never come near this.
+  const search = new URLSearchParams(typeof location !== 'undefined' ? location.search : '');
+  const rtdbEmu = search.get('rtdb');
+  if (rtdbEmu) {
+    const [h, p] = rtdbEmu.split(':');
+    dbMod.connectDatabaseEmulator(db, h, Number(p) || 9000);
+  }
+
+  /**
+   * Anonymous auth. The rules demand an authenticated writer, so a failure
+   * here is the FIRST thing that goes wrong on a fresh project — and the
+   * one failure a player must never meet as a lobby that spins forever.
+   * We keep the reason and hand it back as a readable line on the card.
+   */
+  let setupError = '';
   try {
     const auth = authMod.getAuth(app);
+    const authEmu = search.get('authemu');
+    if (authEmu) authMod.connectAuthEmulator(auth, `http://${authEmu}`, { disableWarnings: true });
     if (!auth.currentUser) await authMod.signInAnonymously(auth);
-  } catch {
-    /* rules decide whether this matters */
+  } catch (err) {
+    const code = (err as { code?: string } | null)?.code ?? '';
+    setupError =
+      code === 'auth/configuration-not-found' || code === 'auth/operation-not-allowed'
+        ? 'enable Anonymous sign-in in the Firebase console'
+        : code === 'auth/network-request-failed'
+          ? 'no route to Firebase'
+          : `sign-in failed (${code || 'unknown'})`;
   }
   const uid = ((): string => {
     try {
@@ -149,12 +174,39 @@ export async function createFirebaseBackend(): Promise<TransportBackend | null> 
     );
   }
 
+  /**
+   * THE WATCHDOG. An unreachable Realtime Database does not throw — the SDK
+   * queues the write and waits, forever, which surfaces as a lobby card
+   * that spins with no explanation. Every opening round trip gets a
+   * deadline instead, so "can't reach it" is a sentence on the card.
+   */
+  const OPEN_TIMEOUT_MS = 12_000;
+
+  function withDeadline<T>(work: Promise<T>, what: string): Promise<T> {
+    return Promise.race([
+      work,
+      new Promise<T>((_, reject) =>
+        setTimeout(() => reject(new Error(`${what} timed out — is the database reachable?`)), OPEN_TIMEOUT_MS),
+      ),
+    ]);
+  }
+
+  /** Refuse to open a room when the session never authenticated. */
+  function blockedBySetup(): boolean {
+    if (!setupError) return false;
+    teardown('error', setupError);
+    return true;
+  }
+
   async function claimSeat(code: string, seat: number): Promise<boolean> {
     const seatRef = ref(db, `${boutPath(code)}/s${seat}`);
-    const res = await runTransaction(seatRef, (cur) => {
-      if (cur !== null) return undefined; // taken — abort
-      return { uid, name: match.me.name, tint: match.me.tintIdx, t: serverTimestamp() };
-    });
+    const res = await withDeadline(
+      runTransaction(seatRef, (cur) => {
+        if (cur !== null) return undefined; // taken — abort
+        return { uid, name: match.me.name, tint: match.me.tintIdx, t: serverTimestamp() };
+      }),
+      'taking the far corner',
+    );
     if (!res.committed) return false;
     void onDisconnect(seatRef).remove();
     return true;
@@ -163,15 +215,19 @@ export async function createFirebaseBackend(): Promise<TransportBackend | null> 
   const backend: TransportBackend = {
     host(): void {
       void (async () => {
+        if (blockedBySetup()) return;
         net.phase = 'connecting';
         net.dirty++;
         try {
           for (let i = 0; i < CODE_TRIES; i++) {
             const code = String(Math.floor(Math.random() * 10 ** NET.codeLength)).padStart(NET.codeLength, '0');
-            const created = await runTransaction(ref(db, boutPath(code)), (cur) => {
-              if (cur !== null) return undefined; // room exists — try another
-              return { created: serverTimestamp(), s0: { uid, name: match.me.name, tint: match.me.tintIdx, t: serverTimestamp() } };
-            });
+            const created = await withDeadline(
+              runTransaction(ref(db, boutPath(code)), (cur) => {
+                if (cur !== null) return undefined; // room exists — try another
+                return { created: serverTimestamp(), s0: { uid, name: match.me.name, tint: match.me.tintIdx, t: serverTimestamp() } };
+              }),
+              'opening the room',
+            );
             if (!created.committed) continue;
             mySeat = 0;
             net.seat = 0;
@@ -193,10 +249,11 @@ export async function createFirebaseBackend(): Promise<TransportBackend | null> 
 
     join(code: string): void {
       void (async () => {
+        if (blockedBySetup()) return;
         net.phase = 'connecting';
         net.dirty++;
         try {
-          const room = await dbMod.get(ref(db, `${boutPath(code)}/s0`));
+          const room = await withDeadline(dbMod.get(ref(db, `${boutPath(code)}/s0`)), 'finding the bout');
           if (!room.exists()) {
             teardown('error', 'no such bout');
             return;

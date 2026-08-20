@@ -162,6 +162,15 @@ real browser, before every push.
   back, a 6 m/s flurry, a whip 180) and asserts ONE PIECE on every formed
   frame (bridge graph over the actual field), exact fist pins (~1e-7 m),
   and first-person eye daylight through guard/crouch/flurry.
+- `online-probe.mjs`: TWO isolated browsers fighting through a real
+  Firebase Realtime Database (the emulator suite by default — real SDK,
+  real rules, real transactions and presence; `LIVE=1` for the cloud):
+  host + join by four digits, identities crossing, both referees reaching
+  the round off server-time deadlines, a body streaming and landing
+  mirrored (0.00 m), a punch crossing to be judged by the receiver's own
+  gloves, the state broadcast truing the attacker's board, the count, and
+  both verdicts agreeing. Plus the two misconfiguration paths — no auth,
+  no database — which must SPEAK on the lobby card, never spin.
 - `fight-probe.mjs`: a whole practice bout through the real pipeline
   (menu press → countdown → punches crossing the SDF at speed → damage →
   KO → ten count → verdict → foyer), the anti-flail park test, then the
@@ -180,6 +189,10 @@ real browser, before every push.
   assertions — everything reads the same SDF the shader draws. When a
   gate needs "which way is in", ask the field's slope, not geometry
   heuristics.
+- **An unreachable database does not throw.** The RTDB SDK queues writes
+  and waits forever, which reads as a lobby spinning with no explanation.
+  Every opening round trip carries a deadline, and a failed anonymous
+  sign-in is caught at setup and reported as a sentence, not a shrug.
 - **Headless is slow motion.** SwiftShader at 3 fps + the sim's dt clamp
   = 0.07× time; transients that last a blink on-device linger half a
   minute in a probe. Measure at steady state, and never tune real

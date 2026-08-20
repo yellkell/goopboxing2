@@ -1,28 +1,13 @@
 /**
- * THE HANDOFF SLOT — paste the Firebase web-app config here and online
- * bouts light up; leave it null and the menu honestly says "needs
- * Firebase" instead of erroring.
+ * THE HANDOFF SLOT — filled. Online bouts are live against this project.
  *
- * What the project needs (see README → "Standing up the Firebase"):
- *  - a REALTIME DATABASE (not Firestore — RTDB's latency is what a pose
- *    stream wants), with the rules from database.rules.json,
- *  - Anonymous Authentication enabled (Build → Authentication →
- *    Sign-in method → Anonymous),
- *  - this config from Project settings → Your apps → Web app. It is
- *    public by design; the database rules are the security boundary,
- *    never this file.
+ * The config is public by design; the database rules
+ * (database.rules.json, deployed in the Firebase console → Realtime
+ * Database → Rules) are the security boundary, never this file.
  *
- * Example shape:
- *
- * export const FIREBASE_CONFIG = {
- *   apiKey: '…',
- *   authDomain: 'yourproject.firebaseapp.com',
- *   databaseURL: 'https://yourproject-default-rtdb.firebaseio.com',
- *   projectId: 'yourproject',
- *   storageBucket: 'yourproject.firebasestorage.app',
- *   messagingSenderId: '…',
- *   appId: '…',
- * };
+ * The project also needs Anonymous Authentication enabled
+ * (Build → Authentication → Sign-in method → Anonymous) — the rules
+ * demand an authenticated writer.
  */
 
 export interface FirebaseWebConfig {
@@ -34,6 +19,17 @@ export interface FirebaseWebConfig {
   storageBucket?: string;
   messagingSenderId?: string;
   appId?: string;
+  /** Analytics id — unused by the game (we load no analytics SDK). */
+  measurementId?: string;
 }
 
-export const FIREBASE_CONFIG: FirebaseWebConfig | null = null;
+export const FIREBASE_CONFIG: FirebaseWebConfig | null = {
+  apiKey: 'AIzaSyDvfs2dbrFXLhePUzKdW48rEaRyvFVy09s',
+  authDomain: 'blastonpickem.firebaseapp.com',
+  databaseURL: 'https://blastonpickem-default-rtdb.firebaseio.com',
+  projectId: 'blastonpickem',
+  storageBucket: 'blastonpickem.firebasestorage.app',
+  messagingSenderId: '1045754652641',
+  appId: '1:1045754652641:web:417f45d01e30d4e20bd4a0',
+  measurementId: 'G-M03QJJMYFC',
+};
