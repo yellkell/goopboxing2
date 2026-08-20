@@ -77,7 +77,13 @@ before two headsets can meet:**
    them the database is whatever its default is — either locked (nothing
    works) or wide open (anyone can scribble in your rooms).
 
-If either is missing, the game now **says so on the lobby card** rather
+And one more when the game is served from GitHub Pages rather than
+localhost: add the Pages origin (`yellkell.github.io`) under
+**Authentication → Settings → Authorized domains**. Firebase seeds that
+list with `localhost` and the project's own `*.firebaseapp.com` /
+`*.web.app` only.
+
+If any of these is missing, the game now **says so on the lobby card** rather
 than spinning ("enable Anonymous sign-in in the Firebase console",
 "opening the room timed out — is the database reachable?"). Both failure
 paths are covered by the probes.
