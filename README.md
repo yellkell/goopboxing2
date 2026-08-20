@@ -44,7 +44,13 @@ adb reverse tcp:5173 tcp:5173   # then open http://localhost:5173 on-device
 ```
 
 `npm run build` typechecks and bundles to `dist/` (fully static — Pages
-serves it; the deploy workflow in `.github/workflows/` does exactly that).
+serves it; the deploy workflow in `.github/workflows/` does exactly that
+on every push to `main`).
+
+**It is live at <https://yellkell.github.io/goopboxing2/>.** Open that in a
+headset browser — on Quest, paste the link into Meta Quest Browser. A
+desktop browser has no WebXR and the landing page says so; for a desktop
+run with the WebXR emulator, use `npm run dev` locally.
 
 ## The controls
 
@@ -130,6 +136,10 @@ npm run probe:online          # TWO browsers over a real Firebase database
                               # (see "Proving it without a cloud round
                               # trip" above) — pairing, mirrored bodies,
                               # a cross-wire punch, the count, the verdict
+npm run probe:dist            # builds, then smoke-tests the SHIPPED
+                              # bundle from a Pages-style subpath: every
+                              # asset resolves, it boots, and PRACTICE
+                              # reaches the bell in the minified code
 node tools/shot.mjs           # style-iteration stills into shots/
 ```
 

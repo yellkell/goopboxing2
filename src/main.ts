@@ -95,7 +95,12 @@ World.create(container, {
       }, 4000);
     });
   } else if (enterButton) {
-    enterButton.textContent = 'XR unavailable';
+    // No WebXR here — almost always "opened on a laptop". Say what to do
+    // about it: a dead button that only reads "unavailable" tells a
+    // first-time visitor nothing, and this link gets shared.
+    enterButton.textContent = 'OPEN ON A HEADSET';
+    const note = document.getElementById('no-xr');
+    if (note) note.hidden = false;
   }
 
   // eslint-disable-next-line no-console

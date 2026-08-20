@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "emu": "node tools/emulators.mjs",
     "probe": "node tools/embody-check.mjs && node tools/fight-probe.mjs",
-    "probe:online": "node tools/online-probe.mjs"
+    "probe:online": "node tools/online-probe.mjs",
+    "probe:dist": "npm run build && node tools/dist-smoke.mjs"
   },
   "dependencies": {
     "@iwsdk/core": "0.4.2",

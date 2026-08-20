@@ -151,6 +151,15 @@
         color: rgba(230, 255, 220, 0.66);
         font-weight: 600;
       }
+      /* Shown only when the browser has no WebXR (see src/main.ts). */
+      .no-xr {
+        color: rgba(255, 190, 120, 0.72);
+        letter-spacing: 0.1em;
+        max-width: 40ch;
+      }
+      .no-xr[hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
@@ -168,6 +177,10 @@
       <div class="fine">
         <b>You are the gel.</b> Your hands are its fists.<br />
         Practice against the house goop, or host a bout and share the four digits.
+      </div>
+      <div class="fine no-xr" id="no-xr" hidden>
+        This browser has no WebXR. Open this page in a headset browser —<br />
+        on Quest, paste the link into Meta&nbsp;Quest&nbsp;Browser.
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
