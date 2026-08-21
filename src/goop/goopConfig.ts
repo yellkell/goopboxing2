@@ -25,7 +25,7 @@ export const CREATURE = {
    *  two bodies in one small ring: lumps are back, and a heavy hit tearing
    *  a fist-sized glob off your opponent — which then crawls home across
    *  the mat — is half the reason to play. */
-  maxLumps: 5,
+  maxLumps: 3,
   /** Max simultaneous impact dents (negative blobs carved by punches). */
   maxDents: 4,
   /** Seconds for glob -> boxer form-up (and back down). */
@@ -99,7 +99,7 @@ export const GEL_LOOK = {
   /** Eye flash colour during an attack telegraph. */
   telegraphColor: 0xffb03a,
   /** Raymarch step cap (the single biggest perf knob on Quest). */
-  maxSteps: 22,
+  maxSteps: 20,
   /** Surface wobble amplitude at rest / when agitated. */
   wobble: 0.010,
   wobbleAgitated: 0.044,

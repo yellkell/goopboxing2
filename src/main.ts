@@ -12,7 +12,8 @@
  */
 
 import { launchXR, SessionMode, World } from '@iwsdk/core';
-import { Color } from 'three';
+import { Color, type WebGLRenderer } from 'three';
+import { PERF } from './config.js';
 import { ensureAudio } from './audio/sfx.js';
 import { ArenaSystem } from './systems/ArenaSystem.js';
 import { FighterSystem, fightersView } from './systems/FighterSystem.js';
@@ -21,6 +22,7 @@ import { HudSystem } from './systems/HudSystem.js';
 import { MenuSystem, menuView } from './systems/MenuSystem.js';
 import { NetworkSystem } from './systems/NetworkSystem.js';
 import { PlayerSystem } from './systems/PlayerSystem.js';
+import { ScreenSystem, screensView } from './systems/ScreenSystem.js';
 
 const container = document.getElementById('scene-container') as HTMLDivElement;
 const enterButton = document.getElementById('enter-vr') as HTMLButtonElement | null;
@@ -62,6 +64,16 @@ World.create(container, {
   // uncovered pixel. The VR fallback paints the dark backdrop back in.
   world.scene.background = null;
 
+  // THE FRAME (config.PERF): buy the raymarch back wholesale. Framebuffer
+  // scale must land before any session is requested; foveation coarsens
+  // the shading where lenses blur it anyway. Together with the shader's
+  // own trims this is the difference between 20 fps and a real frame.
+  {
+    const renderer = (world as unknown as { renderer?: WebGLRenderer }).renderer;
+    renderer?.xr?.setFramebufferScaleFactor?.(PERF.renderScale);
+    renderer?.xr?.setFoveation?.(PERF.foveation);
+  }
+
   // Order matters lightly: the tracked body first, then the bodies that
   // wear it, then the referee that reads both, then the room and the ink.
   world.registerSystem(PlayerSystem);
@@ -71,6 +83,7 @@ World.create(container, {
   world.registerSystem(HudSystem);
   world.registerSystem(MenuSystem);
   world.registerSystem(NetworkSystem);
+  world.registerSystem(ScreenSystem);
 
   const arSupported =
     (await navigator.xr?.isSessionSupported(SessionMode.ImmersiveAR).catch(() => false)) === true;
@@ -147,6 +160,8 @@ declare global {
       /** Draw calls / triangles this frame — the scenery's budget check. */
       info: () => { calls: number; triangles: number } | null;
       scene: () => import('three').Scene | null;
+      /** Live-surface snapshots (jumbotron / mirror RTs as data URLs). */
+      screens: typeof screensView;
       /** The AR ring layout: adjust mode, side moves, live values. */
       ring: {
         adjust: (on: boolean) => void;
@@ -201,4 +216,5 @@ window.__gbx = {
     layout: ringLayout,
     state: ringAdjust,
   },
+  screens: screensView,
 };

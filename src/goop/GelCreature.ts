@@ -337,6 +337,29 @@ export class GelCreature {
     return this.group.localToWorld(out);
   }
 
+  private fadeStash = 1;
+
+  /**
+   * MIRROR PASS bracketing. The first-person body masks its head/neck out
+   * of the render pack and fades itself down — right for your own eyes,
+   * wrong for a mirror. Between begin/end the material draws the FULL
+   * pack at full fade; call end before the main view renders again.
+   */
+  beginFullBody(): void {
+    const u = this.gel.material.uniforms;
+    (u.uBlobs.value as Float32Array).set(this.sim.packedAll);
+    u.uCount.value = this.sim.packedAllCount;
+    this.fadeStash = u.uFade.value as number;
+    u.uFade.value = 1;
+  }
+
+  endFullBody(): void {
+    const u = this.gel.material.uniforms;
+    (u.uBlobs.value as Float32Array).set(this.sim.packed);
+    u.uCount.value = this.sim.packedCount;
+    u.uFade.value = this.fadeStash;
+  }
+
   /** Signed distance from a world point to the gel surface, in WORLD
    *  metres (the local field × the parent scale). */
   fieldAtWorld(p: Vector3): number {

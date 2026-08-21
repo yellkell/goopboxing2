@@ -147,8 +147,15 @@ export class FighterSystem extends createSystem({}) {
     /* ── body language by screen ─────────────────────────────────────── */
     const upScreens = match.screen === 'countdown' || match.screen === 'round' || match.screen === 'ko';
     mine.setFormTarget(upScreens || match.screen === 'foyer' || match.screen === 'lobby' ? 1 : 0);
-    // Their glob idles ringside through the menus; stands for the fight.
     theirs.setFormTarget(upScreens ? 1 : 0);
+    // THE MENU AREA IS YOURS: the opponent doesn't exist in the foyer or
+    // the lobby — they pour up out of nothing at the countdown (the sim
+    // keeps ticking underneath so the entrance is a formed body rising,
+    // not a pop). rest/result keep them: the corners and the verdict
+    // tableau are part of the fight.
+    const foeShown = upScreens || match.screen === 'rest' || match.screen === 'result';
+    theirs.group.visible = foeShown;
+    if (this.theirFx) this.theirFx.group.visible = foeShown;
 
     /* ── mine: the embodiment ────────────────────────────────────────── */
     const p = this.myPose;

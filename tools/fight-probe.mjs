@@ -80,6 +80,11 @@ const act1 = await page.evaluate(async () => {
   await frames(5);
 
   out.foyer = g.match.screen === 'foyer';
+  // THE MENU AREA: no opponent, mirror up, jumbotron dark.
+  const find = (n) => g.scene().children.find((c) => c.name === n);
+  out.foyerFoeHidden = g.fighters.theirs.group.visible === false;
+  out.foyerMirror = find('the-mirror')?.visible === true;
+  out.foyerJumboDark = find('the-jumbotron')?.visible === false;
   g.menu.press('practice');
   out.countdown = await until(() => g.match.screen === 'countdown', 3000);
   out.roundStarted = await until(() => g.match.screen === 'round', 6000);
@@ -88,6 +93,10 @@ const act1 = await page.evaluate(async () => {
   g.fight.debugExtendRound(900);
   out.botName = g.match.foe.name;
   out.botStyle = g.fighters.brain?.styleName ?? '?';
+  // THE FIGHT: opponent present, jumbotron live, mirror dark.
+  out.roundFoeShown = g.fighters.theirs.group.visible === true;
+  out.roundJumbo = find('the-jumbotron')?.visible === true;
+  out.roundMirrorDark = find('the-mirror')?.visible === false;
   // Let the springs finish pouring the fighter up before judging aim.
   await until(() => g.fighters.theirs.formValue > 0.97, 4000);
   await sleep(400);
@@ -184,8 +193,12 @@ const act1 = await page.evaluate(async () => {
 });
 
 check(act1.foyer, 'starts in the foyer');
+check(act1.foyerFoeHidden, 'the menu area is YOURS (no opponent in the foyer)');
+check(act1.foyerMirror && act1.foyerJumboDark, 'the mirror is up in the foyer, the jumbotron dark');
 check(act1.countdown, 'PRACTICE → countdown');
 check(act1.roundStarted, `bell rings (bot: ${act1.botName}, style: ${act1.botStyle})`);
+check(act1.roundFoeShown, 'the opponent pours in for the fight');
+check(act1.roundJumbo && act1.roundMirrorDark, 'the jumbotron is live in the round, the mirror dark');
 check(act1.hpAfter < act1.hpStart, `punches land: bot ${act1.hpStart} → ${Math.round(act1.hpAfter)} hp over ${act1.swings} swings`);
 check(act1.landed + act1.blocked >= 4, `judge tallied (landed ${act1.landed}, blocked ${act1.blocked})`);
 check(act1.parkDamage <= 8, `anti-flail: a parked fist ticked ${act1.parkDamage.toFixed(1)} hp (≤ one hit)`);

@@ -80,6 +80,13 @@ real knees. The judge is honest:
   Your guard is judged where YOUR headset sees your gloves;
 - slow contact is a *poke*: it shoves the gel around and wobbles, for free.
 
+Around the ring: the **scoreboard** hangs beyond your far ropes, a
+**jumbotron** hangs beyond your near ropes showing the live match from a
+ringside broadcast camera, and a **mirror** stands beside the foyer menu
+so you can look at yourself (the mirror shows your WHOLE goop — the head
+your first-person view hides). The opponent doesn't exist in the menu —
+they pour up out of the floor at the countdown.
+
 Menus are lasers: point either controller, pull the trigger. **Press A (or
 X)** for the quick menu — that's where **ADJUST RING** lives: reach toward
 any side of the ring, hold the trigger, and drag that side to your wall
@@ -183,6 +190,10 @@ src/
 tools/                 headless probes + the emulator runner
 database.rules.json    the database's security boundary (deploy this)
 ```
+
+Performance knobs live in `config.PERF` (WebXR framebuffer scale +
+foveation), `config.GOOPS` (per-body raymarch quality) and
+`goopConfig.GEL_LOOK.maxSteps`.
 
 `DESIGN.md` carries the design notes — the embodiment mapping, the judging
 law, the wire, and the hard-won fixes (read it before retuning the sim).

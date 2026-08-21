@@ -133,6 +133,55 @@ export const RING = {
   boardHeight: 2.5,
 };
 
+/* ─────────────────────────────── THE FRAME ───────────────────────────────
+ * Quest's frame is bought per pixel, and the raymarch pays per pixel
+ * twice over. These are the wholesale knobs (the retail ones are the
+ * quality scales in THE GOOPS and GEL_LOOK.maxSteps).
+ */
+export const PERF = {
+  /** WebXR framebuffer scale (1 = native). 0.85 ≈ 72% of the pixels —
+   *  slight softness, big frame. Applied before the session starts. */
+  renderScale: 0.85,
+  /** Fixed foveated rendering 0..1 (1 = strongest edge coarsening). */
+  foveation: 1,
+};
+
+/* ─────────────────────────────── THE SCREENS ─────────────────────────────
+ * Two live render-to-texture surfaces, both cheap by construction (small
+ * targets, skipped frames, only alive on the screens that need them):
+ *  - THE JUMBOTRON: a broadcast-angle view of the match, mounted above
+ *    the NEAR side of your ring (opposite the scoreboard).
+ *  - THE MIRROR: a selfie panel beside the foyer menu showing YOUR goop
+ *    in full — head included (the mirror renders the full pack the
+ *    first-person view masks).
+ */
+export const SCREENS = {
+  jumbotron: {
+    /** Screen width (m); 16:9. */
+    width: 2.3,
+    /** Render target size. */
+    resX: 448,
+    resY: 252,
+    /** Capture every Nth frame. */
+    everyN: 3,
+    /** Mount: back beyond the NEAR ropes, up high (mirrors the board). */
+    setback: 1.0,
+    height: 2.5,
+  },
+  mirror: {
+    /** Panel size (m); portrait. */
+    width: 0.72,
+    height: 1.14,
+    resX: 320,
+    resY: 500,
+    everyN: 2,
+    /** Camera distance from your body (m) and its vertical FOV — framed
+     *  for the WHOLE goop, head dome to puddle skirt. */
+    camDist: 2.6,
+    fov: 58,
+  },
+};
+
 /* ─────────────────────────────── THE GOOPS ───────────────────────────────
  * Both fighters run the vendored gel sim in its NATIVE man-size internally
  * and wear a parent scale on top: your eyes stay the creature's eyes (the
@@ -146,8 +195,8 @@ export const GOOPS = {
   scale: 1.4,
   /** Raymarch step budget scales (1 = full). Two creatures share a frame:
    *  the one you inhabit runs leaner — most of it is behind your eyes. */
-  foeQuality: 0.85,
-  selfQuality: 0.6,
+  foeQuality: 0.8,
+  selfQuality: 0.55,
   /** Sim clock for fighters (1 = real time). */
   timeScale: 1,
   /** Corner tint decks. Index 0 is the classic green; pickable pre-bout. */

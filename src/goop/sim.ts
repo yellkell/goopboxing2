@@ -257,6 +257,10 @@ export class GoopSim {
 
   /** Packed vec4 [x,y,z,r] per blob, fed straight to the shader. */
   readonly packed = new Float32Array(MAX_BLOBS * 4);
+  /** The FULL pack — renderSkip ignored (head and neck included). The
+   *  mirror renders your whole body from this; the main view never does. */
+  readonly packedAll = new Float32Array(MAX_BLOBS * 4);
+  packedAllCount = 0;
   readonly packedDents = new Float32Array(MAX_DENTS * 4);
   packedCount = 0;
   packedDentCount = 0;
@@ -1002,6 +1006,22 @@ export class GoopSim {
     for (const l of this.lumps) put(l);
     for (const d of this.drips) put(d);
     this.packedCount = n;
+
+    // The full pack (mirror pass): same order, nothing skipped.
+    let f = 0;
+    const putAll = (b: Blob) => {
+      if (f >= MAX_BLOBS) return;
+      const o = f * 4;
+      this.packedAll[o] = b.x;
+      this.packedAll[o + 1] = b.y;
+      this.packedAll[o + 2] = b.z;
+      this.packedAll[o + 3] = Math.max(0.008, b.r);
+      f++;
+    };
+    for (const b of this.core) putAll(b);
+    for (const l of this.lumps) putAll(l);
+    for (const d of this.drips) putAll(d);
+    this.packedAllCount = f;
 
     let m = 0;
     for (const dent of this.dents) {

@@ -583,7 +583,7 @@ export class FightSystem extends createSystem({}) {
   private pokes(now: number): void {
     if (match.screen === 'round') return;
     const theirs = fightersView.theirs;
-    if (!theirs) return;
+    if (!theirs || !theirs.group.visible) return; // nobody in the menu area
     const rig = fightersView.rigMine;
     for (const hand of ['left', 'right'] as const) {
       const pos = rig ? rig.fist(hand) : hand === 'left' ? tracked.handL : tracked.handR;

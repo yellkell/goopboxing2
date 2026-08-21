@@ -210,7 +210,7 @@ const FRAG = /* glsl */ `
     {
       float f1 = fieldCheap(p + rd * 0.13);
       thick += clamp(-f1 / 0.09, 0.0, 1.0) * 0.5;
-      if (uSteps >= 18) {
+      if (uSteps > 18) {
         float f2 = fieldCheap(p + rd * 0.32);
         thick += clamp(-f2 / 0.09, 0.0, 1.0) * 0.5;
       } else {
@@ -336,7 +336,7 @@ export function createGelMaterial(): GelUniforms {
       (u.uInvModel.value as Matrix4).copy(invModel);
     },
     setQuality(q) {
-      material.uniforms.uSteps.value = Math.max(14, Math.round(GEL_LOOK.maxSteps * Math.min(1, q)));
+      material.uniforms.uSteps.value = Math.max(12, Math.round(GEL_LOOK.maxSteps * Math.min(1, q)));
     },
   };
 }

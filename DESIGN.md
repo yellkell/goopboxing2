@@ -21,6 +21,35 @@ are yours alone. The scoreboard is mounted in the air above YOUR
 far side, set back a metre beyond the ropes (an arena jumbotron over the
 opponent's shoulder); the bot clamps its footwork inside YOUR ring.
 
+## The frame (perf on Quest)
+
+The raymarch buys the whole look and pays per pixel, so the frame is
+bought back wholesale first: `PERF.renderScale` (0.85 framebuffer scale
+≈ 72% of the pixels) and `PERF.foveation` (1.0 — the lenses blur the
+edges anyway) are applied before the session starts. Retail trims on
+top: step budgets 20 max with a 12-step floor, self at 0.55 / foe at
+0.8 quality, a single thickness sample at ≤18 steps, flying lumps
+capped at 3 (the pack used to grow to 32 blobs exactly when punches
+landed — the action spike), and the second body simply absent from the
+menus.
+
+## The screens (ScreenSystem)
+
+Two render-to-texture surfaces, cheap by construction — tiny targets
+(1–2% of the headset's pixels), captured every 2nd/3rd frame, each
+alive only on the screens that need it:
+
+- **THE JUMBOTRON** above the near side (opposite the scoreboard,
+  following it when the ring is dragged): a fixed ringside camera at
+  the left ropes broadcasts the classic side-on angle of the match.
+- **THE MIRROR** beside the foyer menu: a selfie camera at 2.6 m. The
+  capture brackets your creature with beginFullBody()/endFullBody() so
+  the mirror shows the head and full opacity your first-person render
+  masks; the plane is X-flipped because a mirror mirrors.
+
+While XR presents, captures flip `renderer.xr.enabled` off around the
+RT pass so the broadcast camera renders, not the headset's.
+
 ## THE REACH (fight/embody: Underdogs-style ranged punching)
 
 Three laws:
