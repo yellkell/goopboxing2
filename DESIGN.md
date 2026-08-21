@@ -1,7 +1,49 @@
 # SLUGFEST — design notes
 
 The pitch in one line: **the goop from the dance floor, but there are two
-of them, they're both people, and they box.**
+of them, they're both people, they box — and the ring is in your living
+room.**
+
+## AR (the venue is your room)
+
+The session is `immersive-ar`. Everything the old VR build used to draw
+around you — void towers, truss, beams, mat, apron, horizon — is gone;
+the stage is posts, ropes, floor trim, a centre decal (16 draw calls,
+~800 triangles for the whole scene). The sky is your ceiling.
+
+**THE RING LAYOUT** (arena/ringLayout.ts): four independent sides in your
+local frame, draggable to your walls in RING ADJUST mode (A-button menu →
+ADJUST RING; grab a rope side with the trigger, one side at a time),
+persisted per headset in localStorage. The law that keeps multiplayer
+sane: **the layout is furniture, the protocol is geometry**. Spawns, the
+2-seat mirror and every judged position ride `RING.spawnBack`; your ropes
+are yours alone. The scoreboard hangs over YOUR far ropes; the bot clamps
+its footwork inside YOUR ring.
+
+## THE REACH (fight/embody: Underdogs-style ranged punching)
+
+Three laws:
+
+1. **The origin is your REAL shoulder** (derived from the head pose at
+   human proportions, never scaled) — `REACH.start/full` are real-arm
+   metres. Inside `start` the mapping is exactly 1:1: your guard is your
+   guard, pin-true to the millimetre.
+2. **Amplification is radial and smooth**: gain ramps 1 → `maxGain`
+   (×2.1) across the extension range, plus a speed lunge — a committed
+   punch throws the gel fist ~1 m past your knuckles on the shoulder line.
+   Deterministic from the tracked pose alone, and the SAME function runs
+   on the remote fighter's wire pose: both bodies throw the same arms.
+3. **The judge reads the amplified fist** (`rig.fistWorldL/R`,
+   `effSpeed`): what you watch land is what scores, and the victim's block
+   check runs against THEIR amplified gloves. A reach-stretched arm swells
+   (fist/elbow/shoulder radii ride the gain, the blend widens) so the
+   rope of gel stays ONE PIECE at full extension — probe-enforced.
+
+The bodies wear `GOOPS.scale` (×1.4) as bulk: your eyes stay the
+creature's eyes, so the size goes into width, thickness and stumpy legs,
+not height. One seam (GelCreature) converts world↔local honestly —
+`fieldAtWorld` returns world metres, impact speeds scale into native sim
+units — so nothing else thinks about it.
 
 The lineage: GOOP built a gel creature you punch; FIRE FIGHT gave it a
 boss's moveset; RAVE RAID taught it to dance and proved the cohesion laws.

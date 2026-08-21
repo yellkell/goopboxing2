@@ -24,6 +24,7 @@ import {
   SRGBColorSpace,
 } from 'three';
 import { FIGHT, GOOPS, RING } from '../config.js';
+import { ringLayout } from '../arena/ringLayout.js';
 import { fightView } from './FightSystem.js';
 import { match, nowS, tracked } from '../fight/state.js';
 import { font } from '../ui/fonts.js';
@@ -232,13 +233,20 @@ export class HudSystem extends createSystem({}) {
 
   init(): void {
     this.rig.add(this.board.mesh);
-    this.board.mesh.position.set(0, 2.35, -RING.spawnBack);
+    this.board.mesh.position.set(0, 2.2, -RING.spawnBack * 2);
     this.card.mesh.position.set(0, 1.78, -RING.spawnBack);
     this.rig.add(this.card.mesh);
     this.scene.add(this.rig);
   }
 
   update(delta: number): void {
+    // AR: the board hangs over the FAR ropes of YOUR ring — drag the ring
+    // to your wall and the scoreboard follows the furniture. The card
+    // floats at the ring's heart. (Layout is live; this is cheap.)
+    const cx = (ringLayout.left + ringLayout.right) / 2;
+    this.board.mesh.position.set(cx, 2.2, ringLayout.far - 0.05);
+    this.card.mesh.position.set(cx, 1.78, (ringLayout.near + ringLayout.far) / 2);
+
     // Board + card always face the fighter reading them (yaw only).
     _look.copy(tracked.head);
     for (const m of [this.board.mesh, this.card.mesh]) {

@@ -22,7 +22,7 @@ export const FIGHT = {
   /** Health per fighter. Persists through a bout; see recovery below. */
   health: 100,
   /** Health regained in the corner between rounds (capped at full). */
-  restRecovery: 30,
+  restRecovery: 35,
   /** The ten count. A fighter KO'd (health 0) is a puddle; at 10 it's over.
    *  (Nobody gets up in v1 — the count is drama, not a saving throw.) */
   koCount: 10,
@@ -45,65 +45,104 @@ export const FIGHT = {
  *   3. the re-arm  — after a scoring hit, that hand must RETRACT clear of
  *                    the surface (rearmDist) before it may score again, so
  *                    resting a fist inside the other goop ticks nothing.
+ *
+ * TUNED FOR A LONG FIGHT: a bout should be won over dozens of exchanges,
+ * not three lucky swings. A max-strength head shot takes ~7; a typical
+ * clean body hit ~3–4; a blocked hit is chip damage. 100 health ≈ 15–30
+ * connections depending on quality — rounds usually go to the cards.
  */
 export const PUNCH = {
-  /** m/s at contact for a scoring hit. Below it: a poke (still wobbles). */
-  hitSpeed: 1.6,
-  /** m/s treated as a full-strength hit (damage scale saturates here). */
-  maxSpeed: 5.5,
+  /** m/s at contact for a scoring hit (measured at the GEL fist — the
+   *  extended one). Below it: a poke (still wobbles). */
+  hitSpeed: 1.7,
+  /** m/s treated as a full-strength hit (damage scale saturates here).
+   *  Extended fists move faster than hands — the ceiling sits higher. */
+  maxSpeed: 7,
   /** Seconds a hand is cold after scoring. */
-  cooldown: 0.28,
+  cooldown: 0.34,
   /** How far (m, along the field) a fist must pull back out to re-arm. */
-  rearmDist: 0.12,
+  rearmDist: 0.14,
   /** Damage = base + strength × scale (strength 0..1 from speed). */
-  dmgBase: 6,
-  dmgScale: 9,
-  /** Head shots (contact within headRadius of the HEAD blob) hit harder. */
+  dmgBase: 2.2,
+  dmgScale: 3.0,
+  /** Head shots (contact within headRadius of the victim's head) hit harder. */
   headMul: 1.4,
-  headRadius: 0.34,
-  /** A blocked hit still lands this fraction of its damage. */
-  blockMul: 0.25,
-  /** The block: a defending glove within this of the contact point (or of
-   *  the line into the head) turns a hit into a block. Judged by the
+  headRadius: 0.45,
+  /** A blocked hit lands only this fraction — a good guard is nearly free. */
+  blockMul: 0.12,
+  /** The block: a defending GEL GLOVE within this of the contact point (or
+   *  of the line into the head) turns a hit into a block. Judged by the
    *  DEFENDER — only your own headset knows where your gloves truly are. */
-  blockRadius: 0.3,
+  blockRadius: 0.44,
   /** Ring out of the well: how deep (m) into the surface still counts as
    *  the contact crossing (the field test threshold). */
   contactDepth: 0.06,
 };
 
+/* ─────────────────────────────── THE REACH ───────────────────────────────
+ * Underdogs-style ranged punching. Your gel fist IS your hand while it
+ * guards (1:1 inside `start` of your shoulder — blocks land where your
+ * real gloves are), and AMPLIFIES as you extend: a committed full-arm
+ * punch throws the gel fist well past your knuckles, the arm ropes out
+ * after it, and fast swings lunge further still. Deterministic from the
+ * tracked pose alone, and applied identically to the remote fighter's
+ * wire pose — both bodies get the same arms, so the fight stays fair.
+ */
+export const REACH = {
+  /** Arm extension (m from shoulder) where amplification starts. Inside
+   *  this the mapping is exactly 1:1 — your guard is your guard. */
+  start: 0.26,
+  /** Extension treated as a full-arm commit (gain saturates here). */
+  full: 0.62,
+  /** Fist distance multiplier at full extension. */
+  maxGain: 2.1,
+  /** Extra metres per (m/s of hand speed) at full extension — the lunge. */
+  lunge: 0.05,
+  /** Hard cap on the gel fist's distance from the shoulder (m, world). */
+  maxWorld: 1.55,
+};
+
 /* ─────────────────────────────── THE RING ────────────────────────────────
- * Your real floor is the canvas (y = 0 always). The ring is sized so two
- * roomscale players overlap the middle: each spawns `spawnBack` metres
- * from the centre, facing it.
+ * AR: your real room is the venue and your real floor is the mat (y = 0
+ * always). The DEFAULT ring is a square around the two spawns; each side
+ * is then draggable to your actual walls (arena/ringLayout.ts) and the
+ * layout persists per headset. spawnBack is PROTOCOL, not decoration —
+ * both clients must agree on it (the 2-seat mirror is built from it), so
+ * moving your ropes never moves your opponent.
  */
 export const RING = {
-  /** Mat half-width — the ring is a square 2× this on a side. */
+  /** Default mat half-width — the starting ring is a square 2× this. */
   half: 2.1,
   /** Corner post height and the three rope heights. */
   postHeight: 1.42,
   ropeHeights: [0.52, 0.9, 1.28],
-  /** Apron skirt drop below the mat trim. */
-  apron: 0.24,
-  /** Each fighter's spawn distance from ring centre. */
-  spawnBack: 1.15,
-  /** Overhead light truss height. */
-  trussHeight: 3.4,
-  /** Soft warning when a fighter's HEAD leaves the mat (visual pulse). */
+  /** Each fighter's spawn distance from ring centre (PROTOCOL — see above). */
+  spawnBack: 1.35,
+  /** Ring-adjust clamps: sides can't cross closer than these (m)… */
+  minWidth: 1.7,
+  minDepth: 2.2,
+  /** …or run further out than this from your spawn (m). */
+  maxSide: 4.6,
+  /** Soft warning when a fighter's HEAD leaves the ring (visual pulse). */
   boundsWarn: 1.9,
 };
 
 /* ─────────────────────────────── THE GOOPS ───────────────────────────────
- * Both fighters run the vendored gel sim MAN-SIZED (1.78 m native) — no
- * parent scaling tricks needed here: you are exactly as big as you are.
- * `embodyScale` maps your calibrated height onto the creature's.
+ * Both fighters run the vendored gel sim in its NATIVE man-size internally
+ * and wear a parent scale on top: your eyes stay the creature's eyes (the
+ * head rides your headset), so the extra size goes into BULK — a broad,
+ * heavy, thick-limbed slab of gel with stumpy legs, not a giant you look
+ * up at. All world↔local conversions account for the scale in one place
+ * (GelCreature).
  */
 export const GOOPS = {
+  /** Parent scale on both fighters. Bulk, reach, presence. */
+  scale: 1.4,
   /** Raymarch step budget scales (1 = full). Two creatures share a frame:
    *  the one you inhabit runs leaner — most of it is behind your eyes. */
-  foeQuality: 1,
-  selfQuality: 0.7,
-  /** Sim clock for fighters (1 = real time — these are people-sized). */
+  foeQuality: 0.85,
+  selfQuality: 0.6,
+  /** Sim clock for fighters (1 = real time). */
   timeScale: 1,
   /** Corner tint decks. Index 0 is the classic green; pickable pre-bout. */
   tints: [
@@ -134,10 +173,11 @@ export const BOT = {
     { name: 'CONTENDER', tempo: 1.25, rest: 1.15, damageMul: 0.8, hp: 100, moveMul: 1 },
     { name: 'CHAMP', tempo: 0.95, rest: 0.75, damageMul: 1.0, hp: 120, moveMul: 1.2 },
   ],
-  /** How far from the player the bot likes to stand (m), scaled per style. */
-  holdDistance: 1.35,
-  pressDistance: 0.95,
-  strikeDistance: 1.5,
+  /** How far from the player the bot likes to stand (m), scaled per style.
+   *  Sized for the big bodies + amplified reach: fights happen at range. */
+  holdDistance: 2.0,
+  pressDistance: 1.3,
+  strikeDistance: 2.15,
 };
 
 /* ─────────────────────────────── THE WIRE ────────────────────────────────

@@ -1,19 +1,31 @@
 # SLUGFEST
 
-**A two-player WebXR boxing game where both fighters ARE the goop.**
+**A two-player AR boxing game where both fighters ARE the goop — in your
+real room.**
 
-You don't fight a gel creature this time — you *wear* one. Your headset is
-its head, your controllers are its fists, and everything in between (the
-leaning trunk, the shrugging shoulders, the folding elbows, the dragging
-puddle-skirt footwork) is derived and simulated: ~20 verlet blobs fused by
-a raymarched smooth-min isosurface, so what your opponent sees — and
-punches — is one living body of slime. Punches carve real dents, ripple the
-surface, and above tearing speed knock fist-sized lumps clean off that
-splat on the mat, quiver, and crawl home.
+Passthrough is the venue: a neon prizefight ring stands on your actual
+floor, its four sides draggable to your actual walls, and the only things
+that aren't your furniture are the two heavyweight slabs of gel throwing
+hands across it. You *wear* one — your headset is its head, your
+controllers are its fists, and everything in between (the leaning trunk,
+the shrugging shoulders, the folding elbows, the dragging puddle-skirt
+footwork) is derived and simulated: ~20 verlet blobs fused by a raymarched
+smooth-min isosurface. What your opponent sees — and punches — is one
+living body of slime. Punches carve real dents, ripple the surface, and
+above tearing speed knock fist-sized lumps clean off that splat on your
+carpet, quiver, and crawl home.
+
+**THE REACH** (the Underdogs move): your gel fist IS your hand while it
+guards, and runs out past your knuckles as you commit — a full-arm punch
+throws it over a metre beyond your reach, the arm roping out thick behind
+it. Fights happen at range, guards happen at your chin, and the judge
+scores the fist you actually watched land.
 
 The gel tech is vendored from the GOOP lineage (GOOP → FIRE FIGHT →
-RAVE RAID) and evolved here: multi-pin kinematics for embodiment, per-corner
-tints, first-person masking, and a frame-rate-honest sim.
+RAVE RAID) and evolved here: multi-pin kinematics for embodiment, reach
+amplification, body scaling, per-corner tints, first-person masking, and a
+frame-rate-honest sim. Headsets without AR fall back to a VR session, same
+game over a dark backdrop.
 
 - **PRACTICE** — fight the house goop: the lineage's fighting-style AI
   (infighter / kickboxer / muay thai / outboxer / rope-a-dope), a new
@@ -54,17 +66,26 @@ run with the WebXR emulator, use `npm run dev` locally.
 
 ## The controls
 
-There are none. Guard with your real hands, punch with your real hands,
-duck with your real knees. The judge is honest:
+Guard with your real hands, punch with your real hands, duck with your
+real knees. The judge is honest:
 
-- a scoring hit needs **real speed** at contact (≥ 1.6 m/s), a per-hand
-  cooldown, and a **retraction** before that hand can score again — parking
-  a fist inside the other goop ticks nothing;
-- **head shots** hit harder; a glove near the contact — or guarding the
-  line into your head — turns a hit into a **block** at quarter damage;
+- a scoring hit needs **real speed** at contact, a per-hand cooldown, and a
+  **retraction** before that hand can score again — parking a fist inside
+  the other goop ticks nothing;
+- damage is tuned for **long fights**: a clean connection takes ~3–7 of
+  100 health, so bouts are won over dozens of exchanges and most rounds go
+  to the cards (round damage decides them);
+- **head shots** hit harder; a gel glove near the contact — or guarding the
+  line into your head — turns a hit into a **block** at ~12% chip damage.
+  Your guard is judged where YOUR headset sees your gloves;
 - slow contact is a *poke*: it shoves the gel around and wobbles, for free.
 
-Menus are lasers: point either controller, pull the trigger.
+Menus are lasers: point either controller, pull the trigger. **Press A (or
+X)** for the quick menu — that's where **ADJUST RING** lives: reach toward
+any side of the ring, hold the trigger, and drag that side to your wall
+(one side at a time; clamps keep the ring a ring). The layout saves per
+headset. Your layout is cosmetic — spawns and judging never move, so your
+room never moves your opponent.
 
 ## The Firebase (project `blastonpickem`)
 

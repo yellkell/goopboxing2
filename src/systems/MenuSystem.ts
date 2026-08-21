@@ -7,6 +7,13 @@
  * the panel, the dot rides the hit, trigger presses. Headless probes
  * drive the same buttons through `menuView.press(id)` — the panel's
  * hit-test IS the API.
+ *
+ * THE QUICK MENU: press A (or X) on either controller — outside a live
+ * round — and a small card floats up at your gaze with the room tools:
+ * ADJUST RING (drag the ropes to your real walls, one side at a time —
+ * see ArenaSystem), RESET RING, CLOSE. While adjust mode is on, A ends
+ * it and saves. This is how an AR game does a settings drawer: on your
+ * wrist's button, not on a wall.
  */
 
 import { createSystem, InputComponent, Vector3 } from '@iwsdk/core';
@@ -14,7 +21,9 @@ import { Group, Quaternion, Raycaster, type Intersection } from 'three';
 import { FIGHTER_NAMES, BOT, GAME_TITLE, GOOPS, NET } from '../config.js';
 import * as sfx from '../audio/sfx.js';
 import { beatNow, setRunning } from '../audio/techno.js';
-import { match } from '../fight/state.js';
+import { match, tracked } from '../fight/state.js';
+import { resetLayout, ringAdjust } from '../arena/ringLayout.js';
+import { arenaView } from './ArenaSystem.js';
 import { hostBout, joinBout, leaveBout, net } from '../net/transport.js';
 import { font } from '../ui/fonts.js';
 import { Panel, UI, type PanelButton } from '../ui/panel.js';
@@ -28,6 +37,10 @@ export const menuView: {
   press?: (id: string) => void;
   buttons?: () => string[];
   mode?: () => MenuMode;
+  /** Probe access: is the A-button quick menu up? */
+  quickOpen?: () => boolean;
+  /** Probe access: open/close the quick menu (the A button headless). */
+  setQuick?: (open: boolean) => void;
 } = {};
 
 function tintCss(hex: number): string {
@@ -37,6 +50,9 @@ function tintCss(hex: number): string {
 export class MenuSystem extends createSystem({}) {
   private panel!: Panel;
   private rig = new Group();
+  private quick!: Panel;
+  private quickRig = new Group();
+  private quickOpen = false;
   private mode: MenuMode = 'main';
   private code = '';
   private hover: string | null = null;
@@ -53,6 +69,10 @@ export class MenuSystem extends createSystem({}) {
     this.rig.position.set(0, 1.42, -0.98);
     this.rig.rotation.x = -0.12;
     this.scene.add(this.rig);
+    this.quick = new Panel(0.5, 0.42, 512, 430);
+    this.quickRig.add(this.quick.group);
+    this.scene.add(this.quickRig);
+    this.quick.setShown(false, true);
     this.pointers = {
       left: new PointerRay(this.scene),
       right: new PointerRay(this.scene),
@@ -60,7 +80,67 @@ export class MenuSystem extends createSystem({}) {
     menuView.press = (id) => this.press(id);
     menuView.buttons = () => this.panel.liveButtons();
     menuView.mode = () => this.mode;
+    menuView.quickOpen = () => this.quickOpen;
+    menuView.setQuick = (open) => this.toggleQuick(open);
     this.repaint();
+  }
+
+  /* ── the quick (A-button) menu ────────────────────────────────────────── */
+
+  private toggleQuick(open: boolean): void {
+    this.quickOpen = open;
+    if (open) {
+      // Float at gaze: 0.85 m out, a touch below eye line, facing you.
+      const fwd = _dir.set(0, 0, -1).applyQuaternion(tracked.headQuat);
+      fwd.y = 0;
+      if (fwd.lengthSq() < 1e-4) fwd.set(0, 0, -1);
+      fwd.normalize();
+      this.quickRig.position.set(
+        tracked.head.x + fwd.x * 0.85,
+        Math.max(1.0, tracked.head.y - 0.12),
+        tracked.head.z + fwd.z * 0.85,
+      );
+      this.quickRig.rotation.set(0, Math.atan2(fwd.x, fwd.z) + Math.PI, 0);
+      this.repaintQuick();
+    }
+    sfx.uiClick();
+  }
+
+  private quickButtons(): PanelButton[] {
+    const adjusting = ringAdjust.active;
+    return [
+      {
+        id: 'qadjust',
+        label: adjusting ? 'DONE ADJUSTING' : 'ADJUST RING',
+        sub: adjusting ? 'saves your room layout' : 'drag the ropes to your walls',
+        primary: true,
+        x: 36,
+        y: 130,
+        w: 440,
+        h: 104,
+      },
+      { id: 'qreset', label: 'RESET RING', small: true, x: 36, y: 254, w: 440, h: 76 },
+      { id: 'qclose', label: 'CLOSE', small: true, x: 36, y: 348, w: 440, h: 64 },
+    ];
+  }
+
+  private repaintQuick(): void {
+    this.quick.paint(
+      'THE ROOM',
+      (g) => {
+        g.font = font(500, 22);
+        g.fillStyle = UI.faint;
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(
+          ringAdjust.active ? 'hold TRIGGER on a rope side · one at a time' : 'the ring is furniture — place it',
+          256,
+          104,
+        );
+      },
+      this.quickButtons(),
+      this.hover,
+    );
   }
 
   /* ── the button sets ──────────────────────────────────────────────────── */
@@ -144,6 +224,16 @@ export class MenuSystem extends createSystem({}) {
       y: 452,
       w: 880,
       h: 140,
+    });
+    bs.push({
+      id: 'adjust',
+      label: 'ADJUST RING',
+      sub: 'fit it to your room',
+      small: true,
+      x: 72,
+      y: 812,
+      w: 880,
+      h: 84,
     });
     bs.push({
       id: 'host',
@@ -263,7 +353,7 @@ export class MenuSystem extends createSystem({}) {
           : net.phase === 'error'
             ? net.error
             : 'two goops enter · one goop schlorps';
-      g.fillText(note, 512, 800);
+      g.fillText(note, 512, 782);
     };
   }
 
@@ -290,6 +380,20 @@ export class MenuSystem extends createSystem({}) {
       return;
     }
     switch (id) {
+      case 'adjust':
+        arenaView.setAdjust(true);
+        this.quickOpen = false;
+        break;
+      case 'qadjust':
+        arenaView.setAdjust(!ringAdjust.active);
+        this.quickOpen = false;
+        break;
+      case 'qreset':
+        resetLayout();
+        break;
+      case 'qclose':
+        this.quickOpen = false;
+        break;
       case 'name': {
         this.nameIdx = (this.nameIdx + 1) % FIGHTER_NAMES.length;
         match.me.name = FIGHTER_NAMES[this.nameIdx];
@@ -359,9 +463,35 @@ export class MenuSystem extends createSystem({}) {
 
   update(delta: number): void {
     this.clock += delta;
-    const shown = match.screen === 'foyer' || match.screen === 'lobby' || match.screen === 'result';
+
+    /* The A-button drawer. In a live round the button is a boxing glove. */
+    const fighting = match.screen === 'round' || match.screen === 'ko';
+    for (const hand of ['left', 'right'] as const) {
+      const pad = this.input?.xr?.gamepads?.[hand];
+      if (!pad) continue;
+      const pressed =
+        pad.getButtonDown(InputComponent.A_Button) || pad.getButtonDown(InputComponent.X_Button);
+      if (!pressed || fighting) continue;
+      if (ringAdjust.active) {
+        arenaView.setAdjust(false); // A ends adjust mode and saves
+        continue;
+      }
+      this.toggleQuick(!this.quickOpen);
+    }
+    if (fighting && this.quickOpen) this.quickOpen = false;
+
+    const quickShown = this.quickOpen && !ringAdjust.active;
+    this.quick.setShown(quickShown);
+    this.quick.tick(delta, 0.4);
+    if (quickShown && (match.dirty !== this.lastDirty || ringAdjust.dirty >= 0)) {
+      this.repaintQuick();
+    }
+
+    const shown =
+      (match.screen === 'foyer' || match.screen === 'lobby' || match.screen === 'result') &&
+      !ringAdjust.active;
     this.panel.setShown(shown);
-    if (!shown) {
+    if (!shown && !quickShown) {
       this.pointers.left.hide();
       this.pointers.right.hide();
       this.panel.tick(delta, 0);
@@ -401,12 +531,21 @@ export class MenuSystem extends createSystem({}) {
       _dir.set(0, 0, -1).applyQuaternion(_quat);
       this.caster.set(_origin, _dir);
       this.caster.far = 4;
-      const hits: Intersection[] = this.caster.intersectObject(this.panel.mesh, false);
-      if (hits.length === 0 || !hits[0].uv) {
+      let target: Panel | null = null;
+      let hits: Intersection[] = [];
+      if (shown) {
+        hits = this.caster.intersectObject(this.panel.mesh, false);
+        if (hits.length > 0 && hits[0].uv) target = this.panel;
+      }
+      if (!target && quickShown) {
+        hits = this.caster.intersectObject(this.quick.mesh, false);
+        if (hits.length > 0 && hits[0].uv) target = this.quick;
+      }
+      if (!target) {
         pointer.update(delta, _origin, null, false);
         continue;
       }
-      const id = this.panel.buttonAt(hits[0].uv.x, hits[0].uv.y);
+      const id = target.buttonAt(hits[0].uv!.x, hits[0].uv!.y);
       pointer.update(delta, _origin, hits[0].point as Vector3, id !== null);
       if (id && !hover) {
         hover = id;

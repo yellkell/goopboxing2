@@ -148,46 +148,37 @@ check(roundA && roundB, 'both referees reach the round');
 
 /* ── 4. poses cross and mirror ─────────────────────────────────────────── */
 // A stands at (0.4, ·, -0.2); B should see A's puppet ooze toward the
-// mirror point (−0.4, ·, −(−0.2) − 2·1.15) = (−0.4, ·, −2.1).
+// mirror point (−0.4, ·, −(−0.2) − 2·spawnBack) = (−0.4, ·, −2.5).
+const SPAWN_BACK = 1.35; // MUST match config.RING.spawnBack
 await A.evaluate(() => window.__gbx.drive(0.4, 1.62, -0.2, 0, 0.24, 1.4, -0.44, 0.56, 1.36, -0.42));
 await B.waitForTimeout(4500);
 const mirror = await B.evaluate(() => {
   const p = window.__gbx.fighters.theirs.position;
   return { x: +p.x.toFixed(2), z: +p.z.toFixed(2) };
 });
-const mirrorErr = Math.hypot(mirror.x - -0.4, mirror.z - -2.1);
+const mirrorErr = Math.hypot(mirror.x - -0.4, mirror.z - (0.2 - 2 * SPAWN_BACK));
 check(mirrorErr < 0.45, `A's body lands mirrored on B (err ${mirrorErr.toFixed(2)} m at ${JSON.stringify(mirror)})`);
 
 /* ── 5. a punch crosses the wire ───────────────────────────────────────── */
 const bHpBefore = (await netState(B)).myHp;
-// A punches THROUGH its local puppet of B, like a real fist.
+// A punches its local puppet of B — THE REACH way: the raw hand sweeps a
+// third of the line, the amplified gel fist crosses the puppet's surface.
 await A.evaluate(async () => {
   const g = window.__gbx;
   const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
-  const th = g.fighters.theirs;
-  const v = th.position;
-  const from = { x: 0.4 + 0.14, y: 1.3, z: -0.2 };
+  const v = g.fighters.theirs.position;
+  const from = { x: 0.4 + 0.15, y: 1.3, z: -0.2 };
   const to = { x: v.x, y: 1.0, z: v.z };
-  const pv = g.tracked.handR.clone();
-  let crossK = -1;
-  for (let k = 0.2; k <= 1.3; k += 0.01) {
-    pv.set(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k);
-    if (th.fieldAtWorld(pv) < 0) {
-      crossK = k;
-      break;
-    }
-  }
-  if (crossK < 0) return;
-  const len = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
-  const stepK = 0.05 / len;
-  for (let s = -3; s <= 3; s++) {
-    const k = crossK + stepK * s;
+  const STEPS = 26;
+  for (let s = 0; s <= STEPS; s++) {
+    const k = 0.06 + (0.6 - 0.06) * (s / STEPS);
     g.drive(0.4, 1.62, -0.2, 0,
       0.24, 1.4, -0.44,
       from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k,
-      0, 4.5);
+      0, 3.4);
     await frame();
   }
+  g.drive(0.4, 1.62, -0.2, 0, 0.24, 1.4, -0.44, 0.55, 1.3, -0.2, 0, 0);
 });
 const hurtB = await waitFor(B, `(g) => g.match.me.health < ${bHpBefore}`, 15000, 'B takes the hit');
 check(hurtB, `the punch crosses: B ${bHpBefore} → ${(await netState(B)).myHp} hp (victim-judged)`);
@@ -196,37 +187,27 @@ check(stateBack, `B's state broadcast trues A's board (A sees foe at ${(await ne
 
 /* ── 6. the KO, declared by the victim, formalised by the host ─────────── */
 await B.evaluate(() => {
-  window.__gbx.match.me.health = 6; // worn down — the next clean hit ends it
+  window.__gbx.match.me.health = 4; // worn down — the next clean hit ends it
 });
 await A.evaluate(async () => {
   const g = window.__gbx;
   const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   // A few more punches (cooldown-spaced) until the far corner collapses.
-  for (let p = 0; p < 6 && g.match.screen === 'round'; p++) {
-    const th = g.fighters.theirs;
-    const v = th.position;
-    const from = { x: 0.54, y: 1.3, z: -0.64 };
+  for (let p = 0; p < 8 && g.match.screen === 'round'; p++) {
+    const v = g.fighters.theirs.position;
+    const from = { x: 0.55, y: 1.3, z: -0.2 };
     const to = { x: v.x, y: 1.0, z: v.z };
-    const pv = g.tracked.handR.clone();
-    let crossK = -1;
-    for (let k = 0.2; k <= 1.3; k += 0.01) {
-      pv.set(from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k);
-      if (th.fieldAtWorld(pv) < 0) { crossK = k; break; }
-    }
-    if (crossK > 0) {
-      const len = Math.hypot(to.x - from.x, to.y - from.y, to.z - from.z);
-      const stepK = 0.05 / len;
-      for (let s = -3; s <= 3; s++) {
-        const k = crossK + stepK * s;
-        g.drive(0.4, 1.62, -0.2, 0, 0.24, 1.4, -0.44,
-          from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k,
-          0, 4.5);
-        await frame();
-      }
+    const STEPS = 26;
+    for (let s = 0; s <= STEPS; s++) {
+      const k = 0.06 + (0.6 - 0.06) * (s / STEPS);
+      g.drive(0.4, 1.62, -0.2, 0, 0.24, 1.4, -0.44,
+        from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k,
+        0, 3.4);
+      await frame();
     }
     g.drive(0.4, 1.62, -0.2, 0, 0.24, 1.4, -0.44, 0.54, 1.34, -0.16, 0, 0);
-    await sleep(420);
+    await sleep(430);
   }
 });
 const koB = await waitFor(B, `(g) => g.match.screen === 'ko' || g.match.screen === 'result'`, 20000, 'B down');

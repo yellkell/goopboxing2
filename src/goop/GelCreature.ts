@@ -3,8 +3,10 @@
  * Vendored from the GOOP lineage and evolved for SLUGFEST, where there are
  * TWO of these in the ring and one of them is YOU.
  *
- * Owns the blob sim, the raymarched gel mesh, the pair of eyes, the contact
- * shadow, its own body-noises, and the punch-throwing animation. Knows
+ * Owns the blob sim, the raymarched gel mesh, the contact shadow, its own
+ * body-noises, and the punch-throwing animation. (No eyes — SLUGFEST's
+ * fighters read through SILHOUETTE: the defined head, the stance, the
+ * telegraph flash. A creature with your face doesn't need beads.) Knows
  * nothing about IWSDK, XR or the bout rules: systems above feed it a look
  * target and steering, and ask it to form up, swing, or take a punch.
  *
@@ -20,9 +22,15 @@
  *               just answers to a human.
  *
  * First-person (`firstPerson: true`): the head/neck blobs are masked out of
- * the RENDER (you'd wear them as a gel helmet) and the eyes aren't built.
- * Physics and the CPU field keep the whole body — what your opponent's
- * client simulates and punches is always all of you.
+ * the RENDER (you'd wear them as a gel helmet). Physics and the CPU field
+ * keep the whole body — what your opponent's client simulates and punches
+ * is always all of you.
+ *
+ * SCALE: `opts.scale` puts a uniform parent scale on the whole fighter.
+ * The sim stays native man-size inside; every world↔local seam in this
+ * class converts honestly (a world signed-distance is local × scale, a
+ * world impact speed is local speed × scale), so callers never think
+ * about it.
  */
 
 import {
@@ -35,7 +43,6 @@ import {
   MeshBasicMaterial,
   PlaneGeometry,
   Quaternion,
-  SphereGeometry,
   Vector3,
 } from 'three';
 import { ATTACKS, CREATURE, GEL_LOOK, type AttackName } from './goopConfig.js';
@@ -51,8 +58,10 @@ export type Hand = 'left' | 'right';
 export interface CreatureOptions {
   /** Body colours (defaults to the classic green — GEL_LOOK). */
   tint?: { shallow: number; deep: number; nucleus: number } | null;
-  /** The fighter you inhabit: no eyes, head unrendered. */
+  /** The fighter you inhabit: head/neck unrendered. */
   firstPerson?: boolean;
+  /** Uniform parent scale on the whole fighter (1 = man-sized). */
+  scale?: number;
 }
 
 interface ActiveAttack {
@@ -107,16 +116,12 @@ export class GelCreature {
   /** See the header: 'ai' runs the strike choreography, 'puppet' is driven. */
   mode: 'ai' | 'puppet' = 'ai';
   readonly firstPerson: boolean;
+  /** Uniform parent scale (see the header). */
+  readonly scale: number;
 
   private gel: GelUniforms;
   private gelMesh: Mesh;
   private shadow: Mesh;
-
-  private eyeL: Group | null = null;
-  private eyeR: Group | null = null;
-  private eyeMats: MeshBasicMaterial[] = [];
-  private blinkTimer = 3;
-  private blink = 0; // 0 open .. 1 shut
 
   /** 0 glob .. 1 boxer (the eased live value; target set from outside). */
   private form = 0;
@@ -153,7 +158,6 @@ export class GelCreature {
    *  the hand however hard the body whips. EmbodyRig fills this. */
   readonly puppetPins: { anchor: number; pos: Vector3 }[] = [];
 
-  private lookLocal = new Vector3(0, 1.6, 2);
   private time = 0;
 
   /** Fighting-style silhouette targets (sim eases toward these). */
@@ -166,6 +170,8 @@ export class GelCreature {
   ) {
     this.group.name = 'goop-fighter';
     this.firstPerson = opts.firstPerson === true;
+    this.scale = opts.scale && Number.isFinite(opts.scale) && opts.scale > 0 ? opts.scale : 1;
+    this.group.scale.setScalar(this.scale);
 
     this.gel = createGelMaterial();
     this.gelMesh = new Mesh(new BoxGeometry(2, 2, 2), this.gel.material);
@@ -192,24 +198,6 @@ export class GelCreature {
       // Your own head is not for your own eyes.
       this.sim.renderSkip[A.HEAD] = 1;
       this.sim.renderSkip[A.NECK] = 1;
-    } else {
-      const mkEye = (): Group => {
-        const g = new Group();
-        const ball = new MeshBasicMaterial({ color: 0x101b10 });
-        this.eyeMats.push(ball);
-        const eye = new Mesh(new SphereGeometry(0.046, 16, 12), ball);
-        const glint = new Mesh(
-          new SphereGeometry(0.013, 8, 6),
-          new MeshBasicMaterial({ color: 0xf4fff2 }),
-        );
-        glint.position.set(0.015, 0.017, 0.035);
-        g.add(eye);
-        g.add(glint);
-        this.group.add(g);
-        return g;
-      };
-      this.eyeL = mkEye();
-      this.eyeR = mkEye();
     }
 
     // The sim narrates; the creature makes the noises and the mess.
@@ -349,12 +337,13 @@ export class GelCreature {
     return this.group.localToWorld(out);
   }
 
-  /** Signed distance from a world point to the gel surface. */
+  /** Signed distance from a world point to the gel surface, in WORLD
+   *  metres (the local field × the parent scale). */
   fieldAtWorld(p: Vector3): number {
     this.group.updateMatrixWorld();
     _v.copy(p);
     this.group.worldToLocal(_v);
-    return this.sim.fieldAt(_v);
+    return this.sim.fieldAt(_v) * this.scale;
   }
 
   // ---------------------------------------------------------------- attacks
@@ -406,7 +395,7 @@ export class GelCreature {
     this.group.worldToLocal(_v);
     _q.copy(this.group.quaternion).invert();
     _v2.copy(dir).applyQuaternion(_q);
-    const res = this.sim.punchAt(_v, _v2, speed);
+    const res = this.sim.punchAt(_v, _v2, speed / this.scale);
     if (res.hit) {
       // Fewer droplets — the deformation carries the impact.
       this.fx.burst(point, dir, 2 + Math.round(res.strength * 5), speed);
@@ -422,7 +411,7 @@ export class GelCreature {
     this.group.worldToLocal(_v);
     _q.copy(this.group.quaternion).invert();
     _v2.copy(dir).applyQuaternion(_q);
-    return this.sim.pokeAt(_v, _v2, speed);
+    return this.sim.pokeAt(_v, _v2, speed / this.scale);
   }
 
   /** Tear the whole fighter down (a rematch builds a fresh one). */
@@ -439,9 +428,9 @@ export class GelCreature {
 
   // ----------------------------------------------------------------- update
 
-  /** `lookWorld`: what the eyes watch and the LOD measures against — the
-   *  LOCAL PLAYER's head on both fighters (yours watches nobody; it has no
-   *  eyes). Puppet offsets/pins must already be written for this frame. */
+  /** `lookWorld`: what the LOD measures against — the LOCAL PLAYER's head
+   *  on both fighters. Puppet offsets/pins must already be written for
+   *  this frame. */
   update(dt: number, lookWorld: Vector3): void {
     this.time += dt;
 
@@ -484,15 +473,13 @@ export class GelCreature {
       this.prevPos.copy(this.group.position);
       _q.copy(this.group.quaternion).invert();
       _v2.applyQuaternion(_q);
+      _v2.divideScalar(this.scale); // world m/s -> native sim units
       const cap = 6;
       _v2.clampLength(0, cap);
       this.sim.applyInertia(-_v2.x * 0.5, -_v2.y * 0.5, -_v2.z * 0.5);
     }
 
-    // Look target in creature space (eyes live here).
     this.group.updateMatrixWorld();
-    this.lookLocal.copy(lookWorld);
-    this.group.worldToLocal(this.lookLocal);
 
     // --- fighting-style silhouette: ooze toward the active stance ---
     const sk = Math.min(1, dt * this.styleEase);
@@ -545,9 +532,12 @@ export class GelCreature {
     // the mid-morph blob would otherwise pour straight through your eyes
     // as a green veil at every bout start. A ghost of you stays visible
     // slumped in the corner (rest) so looking down never reads as empty.
+    // CAPPED well under full: at the big body scale your own shoulders and
+    // chest live at the edge of view, and self-gel at foe opacity washes
+    // the whole world green — presence, not a veil.
     if (this.firstPerson) {
       const formed = Math.max(0, Math.min(1, (this.form - 0.86) / 0.12));
-      this.gel.material.uniforms.uFade.value = 0.22 + 0.78 * formed;
+      this.gel.material.uniforms.uFade.value = 0.22 + 0.36 * formed;
     }
 
     // Shadow hugs the current mass footprint.
@@ -557,11 +547,11 @@ export class GelCreature {
     this.shadow.position.z = _v.z;
     (this.shadow.material as MeshBasicMaterial).opacity = 0.5 + this.koVal * 0.2;
 
-    // Distance LOD: past ~3.5 m the full step budget is invisible — shed it.
+    // Distance LOD: past ~3.5 body-heights the full step budget is
+    // invisible — shed it. (Fighters normally carry a qualityOverride.)
+    const near = 3.5 * this.scale;
     const camDist = this.group.position.distanceTo(lookWorld);
-    this.gel.setQuality(this.qualityOverride ?? (camDist < 3.5 ? 1 : 3.5 / camDist));
-
-    if (this.eyeL && this.eyeR) this.updateEyes(dt, lookWorld);
+    this.gel.setQuality(this.qualityOverride ?? (camDist < near ? 1 : near / camDist));
   }
 
   /**
@@ -958,54 +948,4 @@ export class GelCreature {
 
   private readonly _pin = { x: 0, y: 0, z: 0 };
 
-  private updateEyes(dt: number, lookWorld: Vector3): void {
-    // Blink clock.
-    this.blinkTimer -= dt;
-    if (this.blinkTimer <= 0) {
-      this.blinkTimer = 2.2 + Math.random() * 3.4;
-      this.blink = 1;
-    }
-    this.blink = Math.max(0, this.blink - dt * 7);
-    const lid = this.koVal > 0.5 ? 0.12 : 1 - Math.min(1, this.blink * 1.6) * 0.92;
-
-    // Eyes ride the surface: from the head blob, walk the field toward the
-    // look target until we pop out of the gel.
-    this.sim.corePos(A.HEAD, _v);
-    _v3.copy(this.lookLocal).sub(_v);
-    _v3.y *= 0.4; // eyes stay level-ish rather than craning
-    _v3.normalize();
-
-    const place = (eye: Group, side: number) => {
-      // Rotate the gaze direction a little left/right for each eye.
-      const ang = 0.3 * side;
-      const dx = _v3.x * Math.cos(ang) - _v3.z * Math.sin(ang);
-      const dz = _v3.x * Math.sin(ang) + _v3.z * Math.cos(ang);
-      _v2.set(dx, _v3.y, dz);
-      let s = 0.05;
-      for (let i = 0; i < 9; i++) {
-        _v.set(
-          this.sim.packed[A.HEAD * 4] + _v2.x * s,
-          this.sim.packed[A.HEAD * 4 + 1] + _v2.y * s,
-          this.sim.packed[A.HEAD * 4 + 2] + _v2.z * s,
-        );
-        if (this.sim.fieldAt(_v) > -0.02) break;
-        s += 0.045;
-      }
-      eye.position.set(_v.x - _v2.x * 0.02, _v.y - _v2.y * 0.02, _v.z - _v2.z * 0.02);
-      eye.scale.set(1, lid, 1);
-      eye.lookAt(lookWorld);
-    };
-    place(this.eyeL!, 1);
-    place(this.eyeR!, -1);
-
-    // Telegraph turns the eyes hot amber.
-    const flash = this.telegraph;
-    for (const m of this.eyeMats) {
-      m.color.setRGB(
-        0.06 + flash * 0.95,
-        0.1 + flash * 0.55,
-        0.06,
-      );
-    }
-  }
 }

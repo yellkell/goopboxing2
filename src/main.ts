@@ -1,13 +1,14 @@
 /**
  * SLUGFEST — entry point.
  *
- * Boots an IWSDK World as a FULL VR session. Your real floor is the mat
- * (roomscale reference space keeps y = 0 at your actual floor), the ring
- * is built around your spawn, and the void is the only world.
+ * AN AR GAME: the session is passthrough (`immersive-ar`) — your real
+ * room is the venue, your real floor is the mat (y = 0 at your actual
+ * floor), and the ring is neon furniture you drag to your own walls.
+ * Headsets without AR fall back to a VR session over a dark backdrop,
+ * same game, no room.
  *
  * `npm run dev` and open the page: a headset offers ENTER THE RING; on
  * desktop the IWSDK dev plugin provides a WebXR emulator (WASD + mouse).
- * Online bouts light up once src/net/firebaseConfig.ts carries a project.
  */
 
 import { launchXR, SessionMode, World } from '@iwsdk/core';
@@ -40,7 +41,7 @@ function showLanding(): void {
 
 World.create(container, {
   xr: {
-    sessionMode: SessionMode.ImmersiveVR,
+    sessionMode: SessionMode.ImmersiveAR,
     offer: 'none',
   },
   // A boxing game: your body IS the controller. Nothing is grabbed and
@@ -57,7 +58,9 @@ World.create(container, {
   },
 }).then(async (world) => {
   worldRef = world;
-  world.scene.background = new Color(0x030503);
+  // AR: no background — the compositor shows your room through every
+  // uncovered pixel. The VR fallback paints the dark backdrop back in.
+  world.scene.background = null;
 
   // Order matters lightly: the tracked body first, then the bodies that
   // wear it, then the referee that reads both, then the room and the ink.
@@ -69,15 +72,20 @@ World.create(container, {
   world.registerSystem(MenuSystem);
   world.registerSystem(NetworkSystem);
 
-  const xrSupported =
+  const arSupported =
+    (await navigator.xr?.isSessionSupported(SessionMode.ImmersiveAR).catch(() => false)) === true;
+  const vrSupported =
     (await navigator.xr?.isSessionSupported(SessionMode.ImmersiveVR).catch(() => false)) === true;
 
-  if (enterButton && xrSupported) {
+  if (enterButton && (arSupported || vrSupported)) {
     enterButton.removeAttribute('disabled');
+    if (!arSupported) enterButton.textContent = 'ENTER THE RING (VR)';
     enterButton.addEventListener('click', () => {
       enterButton.setAttribute('disabled', '');
       ensureAudio(); // unlock the AudioContext inside the tap gesture
-      launchXR(world, { sessionMode: SessionMode.ImmersiveVR });
+      const mode = arSupported ? SessionMode.ImmersiveAR : SessionMode.ImmersiveVR;
+      world.scene.background = arSupported ? null : new Color(0x030503);
+      launchXR(world, { sessionMode: mode });
 
       const watchForSession = (): void => {
         if (world.session) {
@@ -112,6 +120,8 @@ World.create(container, {
  * __gbx.drive(0,1.6,0, …) to puppet the tracked body. */
 import { match, tracked, resetBout } from './fight/state.js';
 import { installLoopback, net } from './net/transport.js';
+import { ringAdjust, ringLayout, type RingSide } from './arena/ringLayout.js';
+import { arenaView } from './systems/ArenaSystem.js';
 
 declare global {
   interface Window {
@@ -137,6 +147,13 @@ declare global {
       /** Draw calls / triangles this frame — the scenery's budget check. */
       info: () => { calls: number; triangles: number } | null;
       scene: () => import('three').Scene | null;
+      /** The AR ring layout: adjust mode, side moves, live values. */
+      ring: {
+        adjust: (on: boolean) => void;
+        move: (side: RingSide, value: number) => void;
+        layout: typeof ringLayout;
+        state: typeof ringAdjust;
+      };
     };
   }
 }
@@ -178,4 +195,10 @@ window.__gbx = {
   },
   scene: () =>
     (worldRef as unknown as { scene?: import('three').Scene } | null)?.scene ?? null,
+  ring: {
+    adjust: (on) => arenaView.setAdjust(on),
+    move: (side, value) => arenaView.moveSide(side, value),
+    layout: ringLayout,
+    state: ringAdjust,
+  },
 };

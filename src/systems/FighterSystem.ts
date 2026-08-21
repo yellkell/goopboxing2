@@ -35,6 +35,10 @@ export const fightersView: {
   theirs?: GelCreature;
   brain?: BoxerBrain | null;
   wire?: WirePose;
+  /** MY embodiment rig — the judge reads its amplified fists. */
+  rigMine?: EmbodyRig;
+  /** The remote fighter's rig (its fists are their gel gloves). */
+  rigTheirs?: EmbodyRig;
   /** FightSystem's judge for bot strikes reaching full extension. */
   onBotApex?: (limbWorld: Vector3, hand: Hand) => void;
 } = {};
@@ -79,7 +83,7 @@ export class FighterSystem extends createSystem({}) {
 
     this.myFx = new GooFx(myTint.splat);
     this.scene.add(this.myFx.group);
-    this.mine = new GelCreature(this.myFx, { tint: myTint, firstPerson: true });
+    this.mine = new GelCreature(this.myFx, { tint: myTint, firstPerson: true, scale: GOOPS.scale });
     this.mine.qualityOverride = GOOPS.selfQuality;
     this.scene.add(this.mine.group);
     this.myRig = new EmbodyRig(this.mine);
@@ -105,7 +109,7 @@ export class FighterSystem extends createSystem({}) {
 
     this.theirFx = new GooFx(theirTint.splat);
     this.scene.add(this.theirFx.group);
-    this.theirs = new GelCreature(this.theirFx, { tint: theirTint });
+    this.theirs = new GelCreature(this.theirFx, { tint: theirTint, scale: GOOPS.scale });
     this.theirs.qualityOverride = GOOPS.foeQuality;
     this.scene.add(this.theirs.group);
     foeSpawnLocal(_spawn);
@@ -127,6 +131,8 @@ export class FighterSystem extends createSystem({}) {
     fightersView.theirs = this.theirs;
     fightersView.brain = this.brain;
     fightersView.wire = this.wire;
+    fightersView.rigMine = this.myRig;
+    fightersView.rigTheirs = this.theirRig;
   }
 
   update(delta: number): void {

@@ -49,6 +49,24 @@ await page.evaluate(() => {
 await settle(2200);
 await page.screenshot({ path: `${outDir}/round.png` });
 
+// THE REACH: a committed right at full amplified extension toward the bot.
+await page.evaluate(async () => {
+  const g = window.__gbx;
+  const frame = () => new Promise((r) => requestAnimationFrame(() => r()));
+  const v = g.fighters.theirs.position;
+  const from = { x: 0.15, y: 1.32, z: -0.1 };
+  const to = { x: v.x, y: 1.05, z: v.z };
+  for (let s = 0; s <= 20; s++) {
+    const k = 0.05 + (0.55 - 0.05) * (s / 20);
+    g.drive(0, 1.62, 0, 0, -0.12, 1.5, -0.2,
+      from.x + (to.x - from.x) * k, from.y + (to.y - from.y) * k, from.z + (to.z - from.z) * k,
+      0, 4.5);
+    await frame();
+  }
+});
+await settle(120);
+await page.screenshot({ path: `${outDir}/reach.png` });
+
 // A punch buried in the other goop.
 await page.evaluate(async () => {
   const g = window.__gbx;

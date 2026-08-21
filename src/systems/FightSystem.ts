@@ -424,12 +424,16 @@ export class FightSystem extends createSystem({}) {
   private punchDetection(): void {
     const theirs = fightersView.theirs;
     if (!theirs || theirs.isKo) return;
+    const rig = fightersView.rigMine;
     const now = nowS();
 
     for (const hand of ['left', 'right'] as const) {
-      const pos = hand === 'left' ? tracked.handL : tracked.handR;
+      // THE REACH's law: the judge tests the AMPLIFIED gel fist — the one
+      // you watch land — at its effective speed. Direction is the hand's
+      // real travel (amplification is radial; the line is the same).
+      const pos = rig ? rig.fist(hand) : hand === 'left' ? tracked.handL : tracked.handR;
       const vel = hand === 'left' ? tracked.velL : tracked.velR;
-      const speed = hand === 'left' ? tracked.speedL : tracked.speedR;
+      const speed = rig ? rig.effSpeed(hand) : hand === 'left' ? tracked.speedL : tracked.speedR;
       const arming = hand === 'left' ? this.armL : this.armR;
 
       const dist = theirs.fieldAtWorld(pos);
@@ -441,7 +445,7 @@ export class FightSystem extends createSystem({}) {
       // field a hand-width back along the travel reads higher than here.
       // (A center-direction dot test degenerates to noise once the fist
       // is deep; the field's own slope never lies.)
-      _p.copy(pos).addScaledVector(vel, -0.07);
+      _p.copy(pos).addScaledVector(vel, -0.09);
       if (theirs.fieldAtWorld(_p) < dist - 0.005) continue;
 
       arming.fired(now);
@@ -482,12 +486,13 @@ export class FightSystem extends createSystem({}) {
   private botStrikeLands(limbWorld: Vector3, hand: Hand): void {
     void hand;
     if (match.screen !== 'round') return;
-    // Contact: near my head, or near my trunk line under it.
+    // Contact: near my head, or near my trunk line under it. Radii sized
+    // for the scaled-up limbs swinging in.
     const headDist = _p.copy(limbWorld).sub(tracked.head).length();
     _p.copy(tracked.head);
     _p.y = Math.max(0.35, Math.min(limbWorld.y, tracked.head.y));
     const trunkDist = _p.sub(limbWorld).length();
-    if (headDist > 0.5 && trunkDist > 0.45) {
+    if (headDist > 0.6 && trunkDist > 0.55) {
       sfx.whiff();
       return;
     }
@@ -495,20 +500,28 @@ export class FightSystem extends createSystem({}) {
     _dir.y *= 0.4;
     _dir.normalize();
     const spec = BOT.levels[match.botLevel] ?? BOT.levels[1];
+    const rig = fightersView.rigMine;
+    const gloveL = rig ? rig.fistWorldL : tracked.handL;
+    const gloveR = rig ? rig.fistWorldR : tracked.handR;
     const hit: IncomingHit = { point: limbWorld, dir: _dir, speed: 3.4 };
-    const j = judgeIncoming(hit, tracked.head, tracked.handL, tracked.handR, spec.damageMul);
+    const j = judgeIncoming(hit, tracked.head, gloveL, gloveR, spec.damageMul);
     this.takeHit(j.damage, j.blocked, j.headshot, hit);
   }
 
-  /** Online: their fist event, mirrored into my frame, judged by my gloves. */
+  /** Online: their fist event, mirrored into my frame, judged by my gloves
+   *  — my GEL gloves (the amplified fists), because that's the guard the
+   *  attacker actually saw in front of my face. */
   private incomingHit(e: WireEvent & { t: 'hit' }): void {
     if (match.screen !== 'round') return;
     _p.set(e.p[0], e.p[1], e.p[2]);
     peerPointToMine(_p);
     _dir.set(e.d[0], e.d[1], e.d[2]);
     peerDirToMine(_dir);
+    const rig = fightersView.rigMine;
+    const gloveL = rig ? rig.fistWorldL : tracked.handL;
+    const gloveR = rig ? rig.fistWorldR : tracked.handR;
     const hit: IncomingHit = { point: _p, dir: _dir, speed: e.s };
-    const j = judgeIncoming(hit, tracked.head, tracked.handL, tracked.handR, 1);
+    const j = judgeIncoming(hit, tracked.head, gloveL, gloveR, 1);
     this.takeHit(j.damage, j.blocked, j.headshot, hit);
     this.broadcastState();
   }
@@ -565,8 +578,9 @@ export class FightSystem extends createSystem({}) {
     if (match.screen === 'round') return;
     const theirs = fightersView.theirs;
     if (!theirs) return;
+    const rig = fightersView.rigMine;
     for (const hand of ['left', 'right'] as const) {
-      const pos = hand === 'left' ? tracked.handL : tracked.handR;
+      const pos = rig ? rig.fist(hand) : hand === 'left' ? tracked.handL : tracked.handR;
       const vel = hand === 'left' ? tracked.velL : tracked.velR;
       const speed = hand === 'left' ? tracked.speedL : tracked.speedR;
       if (theirs.pokeWorld(pos, vel, Math.max(speed, 0.2)) && now > this.wobbleGate) {

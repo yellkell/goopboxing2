@@ -203,12 +203,19 @@ const FRAG = /* glsl */ `
     // ---- approximate thickness along the view ray ----
     // Two soft density samples (not binary inside/outside) keep the alpha
     // and absorption ramps continuous — no onion-ring banding at the rim.
+    // LOW-QUALITY MODE (a cut step budget, e.g. your own body or a far
+    // fighter): one sample — the second blob loop is the cost, and the
+    // absorption ramp barely misses it.
     float thick = 0.0;
     {
       float f1 = fieldCheap(p + rd * 0.13);
-      float f2 = fieldCheap(p + rd * 0.32);
       thick += clamp(-f1 / 0.09, 0.0, 1.0) * 0.5;
-      thick += clamp(-f2 / 0.09, 0.0, 1.0) * 0.5;
+      if (uSteps >= 18) {
+        float f2 = fieldCheap(p + rd * 0.32);
+        thick += clamp(-f2 / 0.09, 0.0, 1.0) * 0.5;
+      } else {
+        thick += clamp(-f1 / 0.14, 0.0, 1.0) * 0.5;
+      }
     }
     float thickN = clamp(thick, 0.0, 1.0);
 

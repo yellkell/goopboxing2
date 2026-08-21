@@ -7,10 +7,16 @@
  *   head + two hands  ──►  20 anchor targets  ──►  the sim's springs,
  *                                                   leash, swell, wobble
  *
- * The mapping is deliberately 1:1 — no retarget scaling. Your fist blob is
- * pinned EXACTLY where your controller is (combat must be honest: the gel
- * glove is your hand), your head anchor rides your headset, and everything
- * unmeasured is DERIVED:
+ * The mapping is 1:1 where honesty lives and AMPLIFIED where the fantasy
+ * does (THE REACH, config.REACH): inside `start` of your shoulder the gel
+ * fist IS your hand — your guard is your guard, blocks land where your
+ * real gloves are — and as you extend, the fist runs out ahead of your
+ * knuckles on the same line (up to ×maxGain, plus a speed lunge), the arm
+ * roping out after it. Underdogs-style ranged punching, deterministic
+ * from the tracked pose alone and applied identically to the remote
+ * fighter's wire pose, so both bodies throw the same arms. The judge
+ * reads the AMPLIFIED fist (rig.fistWorldL/R + effSpeedL/R) — what you
+ * see land is what scores. Everything else is DERIVED:
  *
  *  - trunk (neck/chest/belly/pelvis) hangs off the head at fixed fractions
  *    of your live head height, leaning from the pelvis up — crouch and the
@@ -36,7 +42,7 @@
  */
 
 import { Quaternion, Vector3 } from 'three';
-import { PUNCH } from '../config.js';
+import { PUNCH, REACH } from '../config.js';
 import type { GelCreature } from './GelCreature.js';
 import { A, ANCHOR_COUNT, BOXER_POSE } from './poses.js';
 
@@ -78,12 +84,71 @@ export class EmbodyRig {
   /** Scratch anchor targets, creature-local [x,y,z] × ANCHOR_COUNT. */
   private readonly t = new Float32Array(ANCHOR_COUNT * 3);
   private lastYawOk = 0;
-  /** The world-space fist pins handed to the creature (see drive()). */
-  private readonly pinL = new Vector3();
-  private readonly pinR = new Vector3();
+
+  /** THE REACH's output — the AMPLIFIED gel fists, world space. These are
+   *  what the sim pins, what the judge tests, and what the wire's hit
+   *  events carry. While guarding they equal the raw hands exactly. */
+  readonly fistWorldL = new Vector3();
+  readonly fistWorldR = new Vector3();
+  /** Distance amplification actually applied this frame (≥ 1). */
+  gainL = 1;
+  gainR = 1;
+  /** Hand speed × gain — the fist's effective speed for the judge. */
+  effSpeedL = 0;
+  effSpeedR = 0;
+
+  private readonly shoulderW = new Vector3();
 
   constructor(private creature: GelCreature) {
     creature.mode = 'puppet';
+  }
+
+  /** The amplified fist for a hand (the judge's contact probe). */
+  fist(hand: 'left' | 'right'): Vector3 {
+    return hand === 'left' ? this.fistWorldL : this.fistWorldR;
+  }
+
+  effSpeed(hand: 'left' | 'right'): number {
+    return hand === 'left' ? this.effSpeedL : this.effSpeedR;
+  }
+
+  /**
+   * THE REACH: raw tracked hand → amplified gel fist, world space.
+   * Shoulder is derived from the head pose alone (deterministic on both
+   * ends of the wire). 1:1 inside REACH.start of the shoulder; smooth
+   * gain up to ×maxGain at full extension; fast hands lunge further.
+   */
+  private amplify(
+    head: Vector3,
+    side: number,
+    hand: Vector3,
+    speed: number,
+    outFist: Vector3,
+  ): number {
+    // The origin is your REAL shoulder (human proportions off the headset,
+    // NEVER scaled by the creature): REACH.start/full are real-arm metres,
+    // so a chin guard reads as zero extension whatever size the gel is.
+    const yaw = this.lastYawOk;
+    const rx = Math.cos(yaw);
+    const rz = -Math.sin(yaw);
+    this.shoulderW.set(
+      head.x + rx * side * 0.19,
+      head.y - 0.24,
+      head.z + rz * side * 0.19,
+    );
+    outFist.copy(hand).sub(this.shoulderW);
+    const r = outFist.length();
+    if (r < 1e-4) {
+      outFist.copy(hand);
+      return 1;
+    }
+    const t = Math.min(1, Math.max(0, (r - REACH.start) / (REACH.full - REACH.start)));
+    const sm = t * t * (3 - 2 * t);
+    const gain = 1 + (REACH.maxGain - 1) * sm;
+    let d = r * gain + Math.max(0, speed) * REACH.lunge * sm;
+    d = Math.min(d, REACH.maxWorld * this.creature.scale);
+    outFist.multiplyScalar(d / r).add(this.shoulderW);
+    return d / r;
   }
 
   /**
@@ -102,6 +167,12 @@ export class EmbodyRig {
       sim.blendScale = 1;
       sim.clearPins();
       c.puppetPins.length = 0;
+      // A slumped body still has hands for the judge to find (raw, gain 1).
+      this.fistWorldL.copy(pose.handL);
+      this.fistWorldR.copy(pose.handR);
+      this.gainL = this.gainR = 1;
+      this.effSpeedL = pose.speedL;
+      this.effSpeedR = pose.speedR;
       return;
     }
 
@@ -126,13 +197,19 @@ export class EmbodyRig {
     _v.set(pose.head.x, 0, pose.head.z);
     c.moveTo(_v);
 
+    /* ── THE REACH: amplified gel fists, world space ──────────────────── */
+    this.gainL = this.amplify(pose.head, -1, pose.handL, pose.speedL, this.fistWorldL);
+    this.gainR = this.amplify(pose.head, 1, pose.handR, pose.speedR, this.fistWorldR);
+    this.effSpeedL = pose.speedL * this.gainL;
+    this.effSpeedR = pose.speedR * this.gainR;
+
     /* ── tracked points into creature-local space ─────────────────────── */
     c.group.updateMatrixWorld();
     _head.copy(pose.head);
     c.group.worldToLocal(_head);
-    _handL.copy(pose.handL);
+    _handL.copy(this.fistWorldL);
     c.group.worldToLocal(_handL);
-    _handR.copy(pose.handR);
+    _handR.copy(this.fistWorldR);
     c.group.worldToLocal(_handR);
 
     // Head blob centre sits under the eyes (the crown clears the headset).
@@ -198,29 +275,42 @@ export class EmbodyRig {
     }
 
     // Fists pin in WORLD space, localised inside creature.update AFTER the
-    // root's own motion — a glove is never a frame behind its hand.
+    // root's own motion — a glove is never a frame behind its hand. The
+    // pins are the AMPLIFIED fists: the arm you see is the arm that hits.
     sim.clearPins();
     c.puppetPins.length = 0;
-    this.pinL.copy(pose.handL);
-    this.pinR.copy(pose.handR);
-    c.puppetPins.push({ anchor: A.FIST_L, pos: this.pinL }, { anchor: A.FIST_R, pos: this.pinR });
+    c.puppetPins.push(
+      { anchor: A.FIST_L, pos: this.fistWorldL },
+      { anchor: A.FIST_R, pos: this.fistWorldR },
+    );
 
     // Fist swell rides punch speed; a guard hand fattens a touch. Elbows
     // take a share of the swell so a fast arm reads as one thick rope
     // (the cohesion swell floors this — whichever asks for more wins).
-    const spL = Math.min(1, Math.max(pose.speedL, 0) / PUNCH.maxSpeed);
-    const spR = Math.min(1, Math.max(pose.speedR, 0) / PUNCH.maxSpeed);
-    const guardL = _handL.distanceTo(_head) < 0.38 ? 0.12 : 0;
-    const guardR = _handR.distanceTo(_head) < 0.38 ? 0.12 : 0;
+    const spL = Math.min(1, Math.max(this.effSpeedL, 0) / PUNCH.maxSpeed);
+    const spR = Math.min(1, Math.max(this.effSpeedR, 0) / PUNCH.maxSpeed);
+    // Guard reads the RAW hands: a fist at your chin is a guard whatever
+    // the reach layer would do with it (gain there is 1 by construction).
+    const guardL = pose.handL.distanceTo(pose.head) < 0.42 ? 0.12 : 0;
+    const guardR = pose.handR.distanceTo(pose.head) < 0.42 ? 0.12 : 0;
+    // THE REACH swells what it stretches: an amplified arm is a LONG arm,
+    // and a long arm must be a thick rope or the smooth-min tears it to
+    // beads. Fist and elbow fatten with the gain (Underdogs forearms),
+    // speed swells on top.
+    const rchL = Math.max(0, this.gainL - 1) * 0.55;
+    const rchR = Math.max(0, this.gainR - 1) * 0.55;
     sim.radiusScale.fill(1);
-    sim.radiusScale[A.FIST_L] = 1 + spL * 0.45 + guardL;
-    sim.radiusScale[A.FIST_R] = 1 + spR * 0.45 + guardR;
-    sim.radiusScale[A.ELBOW_L] = 1 + spL * 0.3;
-    sim.radiusScale[A.ELBOW_R] = 1 + spR * 0.3;
+    sim.radiusScale[A.FIST_L] = 1 + spL * 0.45 + guardL + rchL;
+    sim.radiusScale[A.FIST_R] = 1 + spR * 0.45 + guardR + rchR;
+    sim.radiusScale[A.ELBOW_L] = 1 + spL * 0.3 + rchL * 1.15;
+    sim.radiusScale[A.ELBOW_R] = 1 + spR * 0.3 + rchR * 1.15;
+    sim.radiusScale[A.SHOULDER_L] = 1 + rchL * 0.6;
+    sim.radiusScale[A.SHOULDER_R] = 1 + rchR * 0.6;
 
-    // Strike tension: the body's fuse widens with the fastest hand, so a
-    // full-extension punch stays a rope of gel, not beads (shader follows).
-    sim.blendScale = 1 + Math.max(spL, spR) * 0.3;
+    // Strike tension: the body's fuse widens with the fastest hand AND the
+    // deepest reach, so a full-extension punch stays a rope of gel, not
+    // beads (the shader's uBlend follows blendScale in lock-step).
+    sim.blendScale = 1 + Math.max(spL, spR) * 0.3 + Math.max(rchL, rchR) * 0.5;
   }
 
   /** One arm: shoulder (derived), elbow (solved), fist (tracked). */

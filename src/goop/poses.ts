@@ -49,8 +49,10 @@ export type Pose = ReadonlyArray<readonly [number, number, number, number]>;
  * splayed feet in a southpaw-ish stance (lead foot forward).
  */
 export const BOXER_POSE: Pose = [
-  [0.0, 1.6, 0.02, 0.155], // HEAD
-  [0.0, 1.42, 0.01, 0.125], // NECK
+  // A DEFINED head: bigger dome over a deliberately thin neck, so the
+  // silhouette reads skull-on-shoulders instead of one tapering slug.
+  [0.0, 1.6, 0.02, 0.19], // HEAD
+  [0.0, 1.41, 0.01, 0.095], // NECK
   [-0.13, 1.27, 0.02, 0.175], // CHEST_L
   [0.13, 1.27, 0.02, 0.175], // CHEST_R
   [0.0, 1.02, 0.03, 0.215], // BELLY

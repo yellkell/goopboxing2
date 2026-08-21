@@ -23,6 +23,7 @@
 
 import { Vector3 } from 'three';
 import { BOT } from '../config.js';
+import { clampIntoRing } from '../arena/ringLayout.js';
 import { mulberry32, mix } from '../game/rng.js';
 import type { GelCreature, Hand } from '../goop/GelCreature.js';
 import type { AttackName } from '../goop/goopConfig.js';
@@ -152,6 +153,9 @@ export class BoxerBrain {
         break;
     }
     _target.y = 0;
+    // The house goop respects YOUR furniture: it never oozes through the
+    // ropes you dragged to your walls.
+    clampIntoRing(_target, 0.35);
     c.moveTo(_target);
 
     // Swing when a combo is queued and the range is honest.

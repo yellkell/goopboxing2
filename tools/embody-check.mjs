@@ -16,8 +16,14 @@
  *
  * and after every sim step checks (a) the bridge graph over the actual
  * field — one component = one creature — and (b) PIN TRUTH: each fist
- * blob within 1 cm of the tracked hand (a glove that isn't where your
- * hand is would make every punch a lie).
+ * blob within 1 cm of the RIG'S AMPLIFIED FIST (rig.fistWorldL/R — the
+ * point the judge tests; a glove that isn't where the judge looks would
+ * make every punch a lie). Then (c) THE REACH LAW itself: a guarding
+ * fist is EXACTLY the hand (gain 1 inside REACH.start), an extended one
+ * runs OUT past the knuckles on the shoulder line.
+ *
+ * Bodies are built at the shipping GOOPS.scale — cohesion and daylight
+ * are proven on the creature players actually wear.
  */
 
 import { chromium } from 'playwright';
@@ -44,12 +50,13 @@ const result = await page.evaluate(async () => {
   const { EmbodyRig } = await import('/src/goop/embody.ts');
   const { A, ANCHOR_COUNT } = await import('/src/goop/poses.ts');
   const { CREATURE } = await import('/src/goop/goopConfig.ts');
+  const { GOOPS, REACH } = await import('/src/config.ts');
 
   const NAME = Object.fromEntries(Object.entries(A).map(([k, v]) => [v, k]));
   const CORE = ANCHOR_COUNT;
 
   const fx = { splat() {}, burst() {}, update() {}, flash() {}, group: null };
-  const creature = new GelCreature(fx, { firstPerson: false });
+  const creature = new GelCreature(fx, { firstPerson: false, scale: GOOPS.scale });
   creature.setFormTarget(1);
   const rig = new EmbodyRig(creature);
   // Bare 'three' can't resolve from an inline evaluate — borrow the
@@ -116,17 +123,14 @@ const result = await page.evaluate(async () => {
         stats.splits++;
         if (!stats.worstSplit) stats.worstSplit = s;
       }
-      // PIN TRUTH: fist blobs where the hands are (creature-local check —
-      // transform tracked hands into local space the same way drive did).
-      for (const [hand, anchor] of [
-        [pose.handL, A.FIST_L],
-        [pose.handR, A.FIST_R],
+      // PIN TRUTH: fist blobs where THE REACH says (world space — the
+      // same point the judge tests and the wire's hit events carry).
+      for (const [target, hand] of [
+        [rig.fistWorldL, 'left'],
+        [rig.fistWorldR, 'right'],
       ]) {
-        creature.group.updateMatrixWorld();
-        _p.copy(hand);
-        creature.group.worldToLocal(_p);
-        creature.sim.corePos(anchor, fist);
-        const err = fist.distanceTo(_p);
+        creature.fistWorld(hand, fist);
+        const err = fist.distanceTo(target);
         if (err > stats.worstPinErr) stats.worstPinErr = err;
       }
     }
@@ -201,13 +205,48 @@ const result = await page.evaluate(async () => {
     pose.speedL = pose.speedR = 0;
   });
 
+  /* ---- THE REACH LAW ---- */
+  // Guard: hands at the chin → the gel fists ARE the hands (gain 1).
+  runPose('reach guard', 50, () => {
+    pose.head.set(0, 1.62, 0);
+    pose.headQuat.copy(yawq(Math.PI));
+    pose.handL.set(-0.14, 1.44, 0.2);
+    pose.handR.set(0.14, 1.4, 0.2);
+    pose.speedL = pose.speedR = 0;
+  });
+  stats.guardErrL = rig.fistWorldL.distanceTo(pose.handL);
+  stats.guardErrR = rig.fistWorldR.distanceTo(pose.handR);
+  stats.guardGain = Math.max(rig.gainL, rig.gainR);
+
+  // Full extension: the gel fist runs OUT past the knuckles, on the line.
+  runPose('reach extend', 50, () => {
+    pose.handR.set(0.18, 1.35, 0.75); // full-arm punch forward (+z facing)
+    pose.speedR = 5;
+  });
+  {
+    const hand = pose.handR;
+    const fistW = rig.fistWorldR;
+    stats.extendGain = rig.gainR;
+    stats.extendBeyond = fistW.distanceTo(pose.head) - hand.distanceTo(pose.head);
+    // Collinearity: fist sits on the shoulder→hand ray (small lateral
+    // err). The reach origin is the HUMAN shoulder — real proportions,
+    // never scaled (facing +z here, so body-right is +x).
+    const sw = new Vector3(pose.head.x + 0.19, pose.head.y - 0.24, pose.head.z);
+    const dir = new Vector3().copy(hand).sub(sw).normalize();
+    const rel = new Vector3().copy(fistW).sub(sw);
+    const along = rel.dot(dir);
+    stats.extendLateral = rel.addScaledVector(dir, -along).length();
+    stats.reachStart = REACH.start;
+  }
+
   /* ---- FIRST-PERSON DAYLIGHT: the wearer's eyes must stay clear of the
    * RENDERED field (head/neck skipped) through guard, crouch and flurry —
    * a body that swallows its own camera is a green screen. ---- */
-  const fpCreature = new GelCreature(fx, { firstPerson: true });
+  const fpCreature = new GelCreature(fx, { firstPerson: true, scale: GOOPS.scale });
   fpCreature.setFormTarget(1);
   const fpRig = new EmbodyRig(fpCreature);
   let minEye = 1e9;
+  let eyeCulprit = -1;
   const eyeField = () => {
     const sim = fpCreature.sim;
     fpCreature.group.updateMatrixWorld();
@@ -218,7 +257,11 @@ const result = await page.evaluate(async () => {
       const dx = _p.x - sim.packed[i * 4];
       const dy = _p.y - sim.packed[i * 4 + 1];
       const dz = _p.z - sim.packed[i * 4 + 2];
-      d = Math.min(d, Math.hypot(dx, dy, dz) - sim.packed[i * 4 + 3]);
+      const di = Math.hypot(dx, dy, dz) - sim.packed[i * 4 + 3];
+      if (di < d) {
+        d = di;
+        eyeCulprit = i;
+      }
     }
     return d;
   };
@@ -254,7 +297,9 @@ const result = await page.evaluate(async () => {
     pose.speedL = Math.abs(Math.cos(w)) * 6;
     pose.speedR = Math.abs(Math.cos(w + Math.PI)) * 6;
   });
-  stats.minEyeField = minEye;
+  stats.minEyeField = minEye * GOOPS.scale; // local -> world metres
+  // packed indices shift with renderSkip; report raw index + a best guess.
+  stats.eyeCulpritPacked = eyeCulprit;
 
   return stats;
 });
@@ -262,7 +307,16 @@ const result = await page.evaluate(async () => {
 console.log('EMBODY CHECK —', JSON.stringify(result));
 check(result.frames > 800, `battery ran (${result.frames} frames)`);
 check(result.splits === 0, `ONE PIECE on every formed frame (splits: ${result.splits}${result.worstSplit ? ' first stray: ' + result.worstSplit : ''})`);
-check(result.worstPinErr < 0.005, `fists live on the hands (worst pin error ${(result.worstPinErr * 100).toFixed(2)} cm)`);
+check(result.worstPinErr < 0.01, `fists live where the judge tests (worst pin error ${(result.worstPinErr * 100).toFixed(2)} cm)`);
+check(
+  result.guardErrL < 0.02 && result.guardErrR < 0.02 && result.guardGain < 1.05,
+  `a guard is EXACTLY your hands (err ${(Math.max(result.guardErrL, result.guardErrR) * 100).toFixed(2)} cm, gain ${result.guardGain.toFixed(2)})`,
+);
+check(
+  result.extendGain > 1.5 && result.extendBeyond > 0.3,
+  `an extended punch runs out past the knuckles (gain ${result.extendGain.toFixed(2)}, +${(result.extendBeyond * 100).toFixed(0)} cm)`,
+);
+check(result.extendLateral < 0.05, `…on the shoulder line (lateral ${(result.extendLateral * 100).toFixed(1)} cm)`);
 check(result.minEyeField > 0.1, `first-person eyes stay in daylight (min clearance ${(result.minEyeField * 100).toFixed(1)} cm)`);
 
 await browser.close();
