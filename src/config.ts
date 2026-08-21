@@ -125,6 +125,12 @@ export const RING = {
   maxSide: 4.6,
   /** Soft warning when a fighter's HEAD leaves the ring (visual pulse). */
   boundsWarn: 1.9,
+  /** The scoreboard: mounted in the air ABOVE the far side of your ring,
+   *  set this far BACK beyond the ropes (m) at this height — an arena
+   *  jumbotron over the opponent's shoulder, not a plate on the rope
+   *  line. It follows the side when you drag the ring to your wall. */
+  boardSetback: 1.0,
+  boardHeight: 2.5,
 };
 
 /* ─────────────────────────────── THE GOOPS ───────────────────────────────

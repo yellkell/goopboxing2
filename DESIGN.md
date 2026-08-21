@@ -17,8 +17,9 @@ ADJUST RING; grab a rope side with the trigger, one side at a time),
 persisted per headset in localStorage. The law that keeps multiplayer
 sane: **the layout is furniture, the protocol is geometry**. Spawns, the
 2-seat mirror and every judged position ride `RING.spawnBack`; your ropes
-are yours alone. The scoreboard hangs over YOUR far ropes; the bot clamps
-its footwork inside YOUR ring.
+are yours alone. The scoreboard is mounted in the air above YOUR
+far side, set back a metre beyond the ropes (an arena jumbotron over the
+opponent's shoulder); the bot clamps its footwork inside YOUR ring.
 
 ## THE REACH (fight/embody: Underdogs-style ranged punching)
 

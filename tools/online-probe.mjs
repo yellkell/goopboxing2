@@ -145,6 +145,9 @@ await A.evaluate(() => window.__gbx.menu.press('bell'));
 const roundA = await waitFor(A, `(g) => g.match.screen === 'round'`, 25000, 'A in round');
 const roundB = await waitFor(B, `(g) => g.match.screen === 'round'`, 25000, 'B in round');
 check(roundA && roundB, 'both referees reach the round');
+// Two headless clients on a software renderer are SLOW — stretch the round
+// so the scripted acts fit (the host is the only clock; B follows the wire).
+await A.evaluate(() => window.__gbx.fight.debugExtendRound(900));
 
 /* ── 4. poses cross and mirror ─────────────────────────────────────────── */
 // A stands at (0.4, ·, -0.2); B should see A's puppet ooze toward the
@@ -235,7 +238,9 @@ const mkRaw = async (tag, query) => {
   await page.goto(base + '/' + query, { waitUntil: 'load', timeout: 30000 });
   await page.waitForFunction(() => window.__gbx?.menu?.press, null, { timeout: 30000 });
   await page.evaluate(() => window.__gbx.menu.press('host'));
-  const spoke = await waitFor(page, `(g) => g.net.phase === 'error' && g.net.error.length > 0`, 25000, tag);
+  // The reachability watchdog itself takes 12 s — on a slow software
+  // renderer the whole path needs real margin.
+  const spoke = await waitFor(page, `(g) => g.net.phase === 'error' && g.net.error.length > 0`, 55000, tag);
   const msg = await page.evaluate(() => window.__gbx.net.error);
   await ctx.close();
   return { spoke, msg };

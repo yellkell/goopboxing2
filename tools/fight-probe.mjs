@@ -83,6 +83,9 @@ const act1 = await page.evaluate(async () => {
   g.menu.press('practice');
   out.countdown = await until(() => g.match.screen === 'countdown', 3000);
   out.roundStarted = await until(() => g.match.screen === 'round', 6000);
+  // Slow software renderers stretch every scripted swing — give the acts
+  // one long round to live in (the KO act ends it explicitly anyway).
+  g.fight.debugExtendRound(900);
   out.botName = g.match.foe.name;
   out.botStyle = g.fighters.brain?.styleName ?? '?';
   // Let the springs finish pouring the fighter up before judging aim.
@@ -256,6 +259,7 @@ const act3 = await page.evaluate(async () => {
   out.startSent = kinds.includes('start');
   out.phaseSent = peer.sentEvents.some((e) => e.t === 'phase' && e.phase === 'countdown');
   out.roundStarted = await until(() => g.match.screen === 'round', 6000);
+  g.fight.debugExtendRound(900); // headless renderers are slow; see act 1
 
   // Poses flow out at the pose rate…
   await frames(30);

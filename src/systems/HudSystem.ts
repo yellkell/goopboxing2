@@ -49,9 +49,13 @@ class BoardFace {
     this.canvas.height = 384;
     this.tex = new CanvasTexture(this.canvas);
     this.tex.colorSpace = SRGBColorSpace;
+    // The board is furniture, not overlay: it depth-tests, so a giant
+    // walking in front of it occludes it like anything else mounted in
+    // your room (both gels write true fragDepth). renderOrder keeps it
+    // drawn after the transparent bodies so the test is honest.
     this.mesh = new Mesh(
       new PlaneGeometry(1.7, 0.64),
-      new MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, depthTest: false, side: DoubleSide }),
+      new MeshBasicMaterial({ map: this.tex, transparent: true, depthWrite: false, side: DoubleSide }),
     );
     this.mesh.renderOrder = 25;
   }
@@ -233,18 +237,20 @@ export class HudSystem extends createSystem({}) {
 
   init(): void {
     this.rig.add(this.board.mesh);
-    this.board.mesh.position.set(0, 2.2, -RING.spawnBack * 2);
+    this.board.mesh.position.set(0, RING.boardHeight, -RING.spawnBack * 2 - RING.boardSetback);
     this.card.mesh.position.set(0, 1.78, -RING.spawnBack);
     this.rig.add(this.card.mesh);
     this.scene.add(this.rig);
   }
 
   update(delta: number): void {
-    // AR: the board hangs over the FAR ropes of YOUR ring — drag the ring
-    // to your wall and the scoreboard follows the furniture. The card
-    // floats at the ring's heart. (Layout is live; this is cheap.)
+    // AR: the board is MOUNTED in the space above the far side of YOUR
+    // ring, set back beyond the ropes — an arena jumbotron hanging over
+    // the opponent's shoulder. Drag the ring to your wall and the board
+    // follows the furniture. The card floats at the ring's heart.
+    // (Layout is live; this is cheap.)
     const cx = (ringLayout.left + ringLayout.right) / 2;
-    this.board.mesh.position.set(cx, 2.2, ringLayout.far - 0.05);
+    this.board.mesh.position.set(cx, RING.boardHeight, ringLayout.far - RING.boardSetback);
     this.card.mesh.position.set(cx, 1.78, (ringLayout.near + ringLayout.far) / 2);
 
     // Board + card always face the fighter reading them (yaw only).

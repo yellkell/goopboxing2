@@ -66,6 +66,12 @@ export const fightView = {
   debugHurt(side: Side, dmg: number): void {
     inst?.debugHurt(side, dmg);
   },
+  /** Harness: stretch the RUNNING round's clock (slow software renderers
+   *  need scripted acts to fit inside one round). Authority-side only —
+   *  online guests follow the wire and never tick their own clock. */
+  debugExtendRound(seconds: number): void {
+    inst?.debugExtendRound(seconds);
+  },
 };
 
 let inst: FightSystem | null = null;
@@ -596,6 +602,12 @@ export class FightSystem extends createSystem({}) {
     this.applyDamage(side, dmg, false);
     if (side === 'me' && match.me.health <= 0 && this.authority && match.screen === 'round') {
       this.enterKo('me');
+    }
+  }
+
+  debugExtendRound(seconds: number): void {
+    if (match.screen === 'round' && this.authority && Number.isFinite(seconds)) {
+      this.deadline = nowS() + seconds;
     }
   }
 }
