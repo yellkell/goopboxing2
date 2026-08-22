@@ -21,13 +21,18 @@ export const CREATURE = {
   /** Smooth-min blend width — how gloopily the blobs fuse (bigger = soupier). */
   blend: 0.19,
   /** Max simultaneous knocked-out lumps in flight/resting on the floor.
-   *  The boss ran ZERO (24 dancers, no march budget to spare). A bout is
-   *  two bodies in one small ring: lumps are back, and a heavy hit tearing
-   *  a fist-sized glob off your opponent — which then crawls home across
-   *  the mat — is half the reason to play. */
-  maxLumps: 3,
+   *  ZERO — ONE PIECE is absolute in SLUGFEST: a fighter never sheds
+   *  globs, however hard the hit; dents, ripples and the agitation
+   *  wobble carry the impact instead. (The RAVE RAID boss shipped the
+   *  same law, for the same two reasons: the body reads better whole,
+   *  and every extra blob is another term in the raymarch's per-pixel
+   *  loop — the pack stays exactly the 20 core blobs, and MAX_BLOBS in
+   *  sim.ts leans on that.) */
+  maxLumps: 0,
   /** Max simultaneous impact dents (negative blobs carved by punches). */
-  maxDents: 4,
+  maxDents: 3,
+  /** Ambient drip beads. ZERO — same ONE PIECE law as maxLumps. */
+  maxDrips: 0,
   /** Seconds for glob -> boxer form-up (and back down). */
   formTime: 1.35,
 };

@@ -139,11 +139,15 @@ export const RING = {
  * quality scales in THE GOOPS and GEL_LOOK.maxSteps).
  */
 export const PERF = {
-  /** WebXR framebuffer scale (1 = native). 0.85 ≈ 72% of the pixels —
-   *  slight softness, big frame. Applied before the session starts. */
-  renderScale: 0.85,
+  /** WebXR framebuffer scale (1 = native). 0.8 ≈ 64% of the pixels —
+   *  soft but honest, and the raymarch pays per pixel. Applied before
+   *  the session starts. */
+  renderScale: 0.8,
   /** Fixed foveated rendering 0..1 (1 = strongest edge coarsening). */
   foveation: 1,
+  /** Ask the session for this refresh rate (Hz). A device defaulting to
+   *  90 spends 25% more frame budget than 72 buys back in feel. */
+  targetFrameRate: 72,
 };
 
 /* ─────────────────────────────── THE SCREENS ─────────────────────────────

@@ -49,9 +49,11 @@ import { Vector3 } from 'three';
 import { CREATURE, IMPACT } from './goopConfig.js';
 import { A, ANCHOR_COUNT, BOXER_POSE, GLOB_POSE, PUDDLE_POSE } from './poses.js';
 
-// Uniform array size shared with the shader. 20 core + 8 lumps + 4 drips —
+// Uniform array size shared with the shader. ONE PIECE is absolute (no
+// lumps, no drips — see goopConfig), so the pack is exactly the 20 core
+// blobs and the shader's three per-pixel loops compile that much shorter —
 // the loop bound is a real cost on Quest, so this is sized exactly.
-export const MAX_BLOBS = 32;
+export const MAX_BLOBS = 20;
 export const MAX_DENTS = CREATURE.maxDents;
 
 const FLOOR_Y = 0.05; // blob centres never sink below r*rest above this
@@ -548,7 +550,7 @@ export class GoopSim {
   // ------------------------------------------------------------------ drips
 
   private spawnDrip(): void {
-    if (this.drips.length >= 4 || this.ko > 0) return;
+    if (this.drips.length >= CREATURE.maxDrips || this.ko > 0) return;
     // Bud off a random low-ish blob.
     const candidates = this.core.filter((b) => b.y < 0.75);
     const host = candidates[Math.floor(Math.random() * candidates.length)];

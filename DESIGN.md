@@ -24,14 +24,20 @@ opponent's shoulder); the bot clamps its footwork inside YOUR ring.
 ## The frame (perf on Quest)
 
 The raymarch buys the whole look and pays per pixel, so the frame is
-bought back wholesale first: `PERF.renderScale` (0.85 framebuffer scale
-≈ 72% of the pixels) and `PERF.foveation` (1.0 — the lenses blur the
-edges anyway) are applied before the session starts. Retail trims on
-top: step budgets 20 max with a 12-step floor, self at 0.55 / foe at
-0.8 quality, a single thickness sample at ≤18 steps, flying lumps
-capped at 3 (the pack used to grow to 32 blobs exactly when punches
-landed — the action spike), and the second body simply absent from the
-menus.
+bought back wholesale first: `PERF.renderScale` (0.8 framebuffer scale
+≈ 64% of the pixels), `PERF.foveation` (1.0 — the lenses blur the edges
+anyway), and `PERF.targetFrameRate` (72 — a device defaulting to 90
+spends 25% more frame than 72 buys back in feel), all applied around
+session start. Retail trims on top: the pack pinned at 20 blobs
+(ONE PIECE absolute — no lumps, no drips — so all three per-pixel
+shader loops shrank from 32 terms), an OVER-RELAXED march (steps
+overshoot 1.4× while the field reads >0.14 — miss-rays, the most
+expensive kind, get out in ~⅔ the steps; the grazing fallback forgives
+the clip), step budgets 20 max with a 12-step floor, self at 0.55 /
+foe at 0.8 quality, a single thickness sample at ≤18 steps, the second
+specular + sheen only above 14 steps (your own body takes the flat
+path; the opponent keeps the full wet look), and the second body
+simply absent from the menus.
 
 ## The screens (ScreenSystem)
 
@@ -195,10 +201,13 @@ Three changes to the vendored gel:
 3. **Render masking** (`renderSkip`) for first person, pack-level only —
    the CPU field never lies to the other player.
 
-Lumps are BACK ON (`maxLumps: 5`): the boss disabled them for a 24-player
-frame budget; a bout is two bodies in one small ring, and a heavy hit
-tearing a glob off your opponent — which crawls home across the mat — is
-half the reason to play.
+**ONE PIECE is absolute** (`maxLumps: 0`, `maxDrips: 0`): a fighter never
+sheds globs, however hard the hit — dents, ripples and the agitation
+wobble carry the impact. Same law the RAVE RAID boss shipped, for the
+same two reasons: the body reads better whole, and every extra blob is
+another term in the raymarch's per-pixel loop — with the pack pinned at
+exactly the 20 core blobs, `MAX_BLOBS` is 20 and all three shader loops
+compile that much shorter.
 
 ## The stage (arena/stage.ts)
 

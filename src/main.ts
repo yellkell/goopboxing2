@@ -104,6 +104,18 @@ World.create(container, {
         if (world.session) {
           hideLanding();
           world.session.addEventListener('end', showLanding, { once: true });
+          // 72 Hz beats dropping frames at 90 (see config.PERF).
+          const s = world.session as XRSession & {
+            supportedFrameRates?: Float32Array;
+            updateTargetFrameRate?: (rate: number) => Promise<void>;
+          };
+          if (s.supportedFrameRates && s.updateTargetFrameRate) {
+            let best = -1;
+            for (const r of s.supportedFrameRates) {
+              if (best < 0 || Math.abs(r - PERF.targetFrameRate) < Math.abs(best - PERF.targetFrameRate)) best = r;
+            }
+            if (best > 0) void s.updateTargetFrameRate(best).catch(() => undefined);
+          }
           return;
         }
         if (!document.body.classList.contains('app-entered')) {

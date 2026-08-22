@@ -11,9 +11,9 @@ controllers are its fists, and everything in between (the leaning trunk,
 the shrugging shoulders, the folding elbows, the dragging puddle-skirt
 footwork) is derived and simulated: ~20 verlet blobs fused by a raymarched
 smooth-min isosurface. What your opponent sees — and punches — is one
-living body of slime. Punches carve real dents, ripple the surface, and
-above tearing speed knock fist-sized lumps clean off that splat on your
-carpet, quiver, and crawl home.
+living body of slime — and it stays ONE body: punches carve real dents,
+send ripples rolling across the surface and set the whole mass roiling,
+but nothing ever tears off. ONE PIECE is absolute.
 
 **THE REACH** (the Underdogs move): your gel fist IS your hand while it
 guards, and runs out past your knuckles as you commit — a full-arm punch

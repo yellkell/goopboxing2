@@ -176,15 +176,20 @@ const FRAG = /* glsl */ `
     if (tEnd <= t) discard;
 
     // ---- sphere trace ----
+    // OVER-RELAXED far from the surface: while the field reads > 0.14 the
+    // step overshoots by 1.4× (soft smooth-min bodies tolerate it, and the
+    // grazing fallback below forgives what it clips). Miss-rays — the most
+    // expensive kind, marching the full box to discard — get out in ~2/3
+    // of the steps; near the surface the march goes exact again.
     float d = 0.0;
     bool hit = false;
     vec3 p = ro;
-    for (int i = 0; i < 96; i++) {
+    for (int i = 0; i < 24; i++) {
       if (i >= uSteps) break;
       p = ro + rd * t;
       d = field(p);
       if (d < max(0.0018, t * 0.004)) { hit = true; break; }
-      t += d; // full-distance steps; the grazing fallback below forgives overshoot
+      t += d * (d > 0.14 ? 1.4 : 1.0);
       if (t > tEnd) break;
     }
     // Step-budget mercy: a ray that spent its steps GRAZING the surface
@@ -235,14 +240,22 @@ const FRAG = /* glsl */ `
     vec3 env = mix(vec3(0.10, 0.11, 0.10), vec3(0.72, 0.78, 0.74), smoothstep(-0.35, 0.8, rWorld.y));
 
     // Two analytic lights: warm key high-front, cool rim behind-left.
+    // Only the DEEPEST cut (your own body's budget) drops the second
+    // specular and the sheen — the opponent keeps the full wet look, it's
+    // the thing the whole game points your eyes at.
     vec3 L1 = normalize(vec3(0.45, 0.85, 0.3));
-    vec3 L2 = normalize(vec3(-0.6, 0.2, -0.75));
     vec3 nw = normalize(mat3(modelMatrix) * n);
     vec3 vw = normalize(mat3(modelMatrix) * v);
     vec3 h1 = normalize(L1 + vw);
-    vec3 h2 = normalize(L2 + vw);
-    float specTight = pow(max(dot(nw, h1), 0.0), 140.0) * 1.6 + pow(max(dot(nw, h2), 0.0), 90.0) * 0.5;
-    float sheen = pow(max(dot(nw, h1), 0.0), 10.0) * 0.14;
+    float ndh1 = max(dot(nw, h1), 0.0);
+    float specTight = pow(ndh1, 140.0) * 1.6;
+    float sheen = 0.0;
+    if (uSteps > 14) {
+      vec3 L2 = normalize(vec3(-0.6, 0.2, -0.75));
+      vec3 h2 = normalize(L2 + vw);
+      specTight += pow(max(dot(nw, h2), 0.0), 90.0) * 0.5;
+      sheen = pow(ndh1, 10.0) * 0.14;
+    }
 
     // Wrap diffuse — gel scatters, it never goes pitch black on the dark side.
     float wrap = clamp((dot(nw, L1) + 0.6) / 1.6, 0.0, 1.0);
