@@ -89,7 +89,7 @@ real knees. The judge is honest:
 - slow contact is a *poke*: it shoves the gel around and wobbles, for free.
 
 Around the ring: the **scoreboard** hangs beyond your far ropes, a
-**jumbotron** hangs beyond your near ropes showing the live match from a
+**jumbotron** hangs beyond your RIGHT ropes showing the live match from a
 ringside broadcast camera, and a **mirror** stands beside the foyer menu
 so you can look at yourself (the mirror shows your WHOLE goop — the head
 your first-person view hides). The opponent doesn't exist in the menu —
