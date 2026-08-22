@@ -217,6 +217,12 @@ const result = await page.evaluate(async () => {
   stats.guardErrL = rig.fistWorldL.distanceTo(pose.handL);
   stats.guardErrR = rig.fistWorldR.distanceTo(pose.handR);
   stats.guardGain = Math.max(rig.gainL, rig.gainR);
+  // STATURE: a 1.62 m driver wears an opponent-tall body (~2.2 m head).
+  {
+    const hw = new Vector3();
+    creature.headWorld(hw);
+    stats.statureHead = hw.y;
+  }
 
   // Full extension: the gel fist runs OUT past the knuckles, on the line.
   runPose('reach extend', 50, () => {
@@ -308,6 +314,10 @@ console.log('EMBODY CHECK —', JSON.stringify(result));
 check(result.frames > 800, `battery ran (${result.frames} frames)`);
 check(result.splits === 0, `ONE PIECE on every formed frame (splits: ${result.splits}${result.worstSplit ? ' first stray: ' + result.worstSplit : ''})`);
 check(result.worstPinErr < 0.01, `fists live where the judge tests (worst pin error ${(result.worstPinErr * 100).toFixed(2)} cm)`);
+check(
+  result.statureHead > 2.05 && result.statureHead < 2.45,
+  `the body stands opponent-tall (head at ${result.statureHead?.toFixed(2)} m for a 1.62 m driver)`,
+);
 check(
   result.guardErrL < 0.02 && result.guardErrR < 0.02 && result.guardGain < 1.05,
   `a guard is EXACTLY your hands (err ${(Math.max(result.guardErrL, result.guardErrR) * 100).toFixed(2)} cm, gain ${result.guardGain.toFixed(2)})`,

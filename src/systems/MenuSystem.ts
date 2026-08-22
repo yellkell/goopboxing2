@@ -20,7 +20,7 @@ import { createSystem, InputComponent, Vector3 } from '@iwsdk/core';
 import { Group, Quaternion, Raycaster, type Intersection } from 'three';
 import { FIGHTER_NAMES, BOT, GAME_TITLE, GOOPS, NET } from '../config.js';
 import * as sfx from '../audio/sfx.js';
-import { beatNow, setRunning } from '../audio/techno.js';
+import { beatNow, setRunning } from '../audio/jukebox.js';
 import { match, tracked } from '../fight/state.js';
 import { resetLayout, ringAdjust } from '../arena/ringLayout.js';
 import { arenaView } from './ArenaSystem.js';
@@ -299,11 +299,7 @@ export class MenuSystem extends createSystem({}) {
         g.fillText(w === 'me' ? 'VICTORY' : w === 'foe' ? 'DEFEAT' : 'DRAW', 512, 250);
         g.font = font(500, 34);
         g.fillStyle = UI.dim;
-        g.fillText(
-          `rounds ${match.me.rounds}–${match.foe.rounds}   hits ${match.me.hitsLanded}–${match.foe.hitsLanded}`,
-          512,
-          380,
-        );
+        g.fillText(`rounds ${match.me.rounds}–${match.foe.rounds}`, 512, 380);
         return;
       }
       if (mode === 'keypad') {

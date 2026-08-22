@@ -25,12 +25,12 @@
 import { createSystem, Vector3 } from '@iwsdk/core';
 import { BOT, FIGHT, MUSIC, PUNCH } from '../config.js';
 import * as sfx from '../audio/sfx.js';
-import { startSet, stopSet } from '../audio/techno.js';
+import { startSet, stopSet } from '../audio/jukebox.js';
 import { ATTACKS } from '../goop/goopConfig.js';
 import type { Hand } from '../goop/GelCreature.js';
 import { freshSeed } from '../game/rng.js';
 import { peerDirToMine, peerPointToMine } from '../game/ring.js';
-import { HandArming, judgeIncoming, punchStrength, type IncomingHit } from '../fight/rules.js';
+import { HandArming, judgeIncoming, punchStrength, type Glove, type IncomingHit } from '../fight/rules.js';
 import { fighter, match, nowS, resetBout, tracked, type Side } from '../fight/state.js';
 import { hooks, net, sendEvent, serverNowMs, srvToLocalS } from '../net/transport.js';
 import { type WireEvent } from '../net/protocol.js';
@@ -459,12 +459,20 @@ export class FightSystem extends createSystem({}) {
       theirs.receivePunchWorld(pos, vel, speed);
 
       if (match.mode === 'practice') {
-        // Both judging roles run here: their "gloves" are wherever the
-        // style parked their fists — the shell soaks, the showboat pays.
+        // Both judging roles run here. THE CLASH for the bot: its fists
+        // only block while IT is throwing — meeting your strike with its
+        // own, exactly the law you live under.
         theirs.headWorld(_head);
         theirs.fistWorld('left', _fistL);
         theirs.fistWorld('right', _fistR);
-        const j = judgeIncoming({ point: pos, dir: vel, speed }, _head, _fistL, _fistR, 1);
+        const botSwing = theirs.isPunching ? PUNCH.clashSpeed + 1 : 0;
+        const j = judgeIncoming(
+          { point: pos, dir: vel, speed },
+          _head,
+          { pos: _fistL, speed: botSwing },
+          { pos: _fistR, speed: botSwing },
+          1,
+        );
         this.applyDamage('foe', j.damage, j.blocked);
         fightersView.brain?.onHit(j.strength);
         if (j.blocked) sfx.gelBlock();
@@ -507,8 +515,12 @@ export class FightSystem extends createSystem({}) {
     _dir.normalize();
     const spec = BOT.levels[match.botLevel] ?? BOT.levels[1];
     const rig = fightersView.rigMine;
-    const gloveL = rig ? rig.fistWorldL : tracked.handL;
-    const gloveR = rig ? rig.fistWorldR : tracked.handR;
+    const gloveL: Glove = rig
+      ? { pos: rig.fistWorldL, speed: rig.effSpeedL }
+      : { pos: tracked.handL, speed: tracked.speedL };
+    const gloveR: Glove = rig
+      ? { pos: rig.fistWorldR, speed: rig.effSpeedR }
+      : { pos: tracked.handR, speed: tracked.speedR };
     const hit: IncomingHit = { point: limbWorld, dir: _dir, speed: 3.4 };
     const j = judgeIncoming(hit, tracked.head, gloveL, gloveR, spec.damageMul);
     this.takeHit(j.damage, j.blocked, j.headshot, hit);
@@ -524,8 +536,12 @@ export class FightSystem extends createSystem({}) {
     _dir.set(e.d[0], e.d[1], e.d[2]);
     peerDirToMine(_dir);
     const rig = fightersView.rigMine;
-    const gloveL = rig ? rig.fistWorldL : tracked.handL;
-    const gloveR = rig ? rig.fistWorldR : tracked.handR;
+    const gloveL: Glove = rig
+      ? { pos: rig.fistWorldL, speed: rig.effSpeedL }
+      : { pos: tracked.handL, speed: tracked.speedL };
+    const gloveR: Glove = rig
+      ? { pos: rig.fistWorldR, speed: rig.effSpeedR }
+      : { pos: tracked.handR, speed: tracked.speedR };
     const hit: IncomingHit = { point: _p, dir: _dir, speed: e.s };
     const j = judgeIncoming(hit, tracked.head, gloveL, gloveR, 1);
     this.takeHit(j.damage, j.blocked, j.headshot, hit);

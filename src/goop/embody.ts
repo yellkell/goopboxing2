@@ -214,7 +214,15 @@ export class EmbodyRig {
 
     // Head blob centre sits under the eyes (the crown clears the headset).
     _head.y = Math.max(0.5, _head.y - 0.07);
-    const H = _head.y; // live head height — every derived Y is a fraction of it
+    const H = _head.y; // live EYE height (local) — crouch reads off this
+    // STATURE: every fighter stands the same native height (the AI runs
+    // the authored 1.6 head; the wire's humans get the same gain), so your
+    // body is as tall as your opponent's whatever your real height. Your
+    // EYES ride at its upper chest — the head, neck, chest and belly are
+    // masked from your own render (GelCreature) so you see the fight, not
+    // the inside of your own dome. Ducking still ducks: the gain is a
+    // multiplier, so the whole column follows your crouch proportionally.
+    const effH = Math.max(0.5, Math.min(1.75, H * 1.385));
 
     const t = this.t;
     const put = (i: number, x: number, y: number, z: number): void => {
@@ -224,7 +232,7 @@ export class EmbodyRig {
     };
 
     /* ── the derived spine ────────────────────────────────────────────── */
-    put(A.HEAD, _head.x, H, _head.z);
+    put(A.HEAD, _head.x, effH, _head.z);
     // Local gaze yaw (group chases it, so this is the transient lean).
     _fwd.set(0, 0, -1).applyQuaternion(pose.headQuat);
     c.group.getWorldQuaternion(_q);
@@ -241,8 +249,8 @@ export class EmbodyRig {
     // squeezed the stack tighter than the sim's separation pass allows,
     // and the surplus extruded the chest up around the wearer's eyes —
     // a first-person green-out bought with blood.)
-    const neckY = H - 0.18;
-    const chestY = H - 0.33;
+    const neckY = effH - 0.18;
+    const chestY = effH - 0.33;
     put(A.NECK, _head.x * 0.88, neckY, _head.z * 0.88);
     put(A.CHEST_L, _head.x * 0.72 - sYx * 0.13, chestY, _head.z * 0.72 - sYz * 0.13);
     put(A.CHEST_R, _head.x * 0.72 + sYx * 0.13, chestY, _head.z * 0.72 + sYz * 0.13);
@@ -262,8 +270,8 @@ export class EmbodyRig {
     }
 
     /* ── arms: shoulders shrug, elbows solve, fists pin ───────────────── */
-    this.arm(-1, A.SHOULDER_L, A.ELBOW_L, A.FIST_L, _handL, H, sYx, sYz);
-    this.arm(1, A.SHOULDER_R, A.ELBOW_R, A.FIST_R, _handR, H, sYx, sYz);
+    this.arm(-1, A.SHOULDER_L, A.ELBOW_L, A.FIST_L, _handL, effH, sYx, sYz);
+    this.arm(1, A.SHOULDER_R, A.ELBOW_R, A.FIST_R, _handR, effH, sYx, sYz);
 
     /* ── write the frame into the sim ─────────────────────────────────── */
     const o = sim.offsets;
@@ -330,6 +338,7 @@ export class EmbodyRig {
 
     // Shoulder: off the neck along the (gaze-yawed) body-right axis, with
     // a SHRUG toward a raised hand and a small reach after a far one.
+    // (H here is the STATURE column height — passed by drive().)
     const baseY = H - 0.23;
     const shrug = Math.max(0, Math.min(0.13, (hand.y - baseY) * 0.22));
     let sx = neckX + side * sYx * 0.27;
@@ -368,6 +377,27 @@ export class EmbodyRig {
     }
     _elbow.copy(_s).addScaledVector(_d, L * 0.5).addScaledVector(_pole, 0.07 + slack * 0.55);
     if (_elbow.y < 0.08) _elbow.y = 0.08;
+    // FACE CLEARANCE: an elbow never occupies your head. Cross-body swings
+    // fold the solved elbow toward the midline, and with the reach-swollen
+    // radii that put gel INSIDE the wearer's eyes — push it out of the head
+    // column laterally (any height; the column is where the camera lives).
+    {
+      const hx = t[A.HEAD * 3];
+      const hz = t[A.HEAD * 3 + 2];
+      const dx = _elbow.x - hx;
+      const dz = _elbow.z - hz;
+      const dHor = Math.hypot(dx, dz);
+      const minHor = 0.34;
+      if (dHor < minHor) {
+        if (dHor > 1e-4) {
+          const k = minHor / dHor;
+          _elbow.x = hx + dx * k;
+          _elbow.z = hz + dz * k;
+        } else {
+          _elbow.x = hx + side * minHor;
+        }
+      }
+    }
     put3(t, elbowI, _elbow.x, _elbow.y, _elbow.z);
   }
 }

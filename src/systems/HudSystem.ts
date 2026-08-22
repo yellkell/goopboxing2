@@ -13,7 +13,7 @@
  * from the same shared numbers.
  */
 
-import { createSystem, Vector3 } from '@iwsdk/core';
+import { createSystem } from '@iwsdk/core';
 import {
   CanvasTexture,
   DoubleSide,
@@ -26,11 +26,9 @@ import {
 import { FIGHT, GOOPS, RING } from '../config.js';
 import { ringLayout } from '../arena/ringLayout.js';
 import { fightView } from './FightSystem.js';
-import { match, nowS, tracked } from '../fight/state.js';
+import { match, nowS } from '../fight/state.js';
 import { font } from '../ui/fonts.js';
 import { UI } from '../ui/panel.js';
-
-const _look = new Vector3();
 
 function css(hex: number, a = 1): string {
   const r = (hex >> 16) & 255;
@@ -146,13 +144,8 @@ class BoardFace {
       pip(W - 76 - i * 44, i < match.foe.rounds, theirs.shallow);
     }
 
-    // Tallies.
-    g.font = font(500, 26);
-    g.fillStyle = UI.faint;
-    g.textAlign = 'left';
-    g.fillText(`HITS ${match.me.hitsLanded}   BLOCKS ${match.me.blocks}`, 56, 340);
-    g.textAlign = 'right';
-    g.fillText(`HITS ${match.foe.hitsLanded}   BLOCKS ${match.foe.blocks}`, W - 56, 340);
+    // No tallies — names, bars, pips and the clock say everything a
+    // corner needs; counters read as arcade noise.
 
     this.tex.needsUpdate = true;
   }
@@ -245,19 +238,14 @@ export class HudSystem extends createSystem({}) {
 
   update(delta: number): void {
     // AR: the board is MOUNTED in the space above the far side of YOUR
-    // ring, set back beyond the ropes — an arena jumbotron hanging over
-    // the opponent's shoulder. Drag the ring to your wall and the board
-    // follows the furniture. The card floats at the ring's heart.
-    // (Layout is live; this is cheap.)
+    // ring, set back beyond the ropes; the card floats at the ring's
+    // heart. Both are FIXED facing your side of the ring — furniture
+    // holds still, it doesn't track your head around the room.
     const cx = (ringLayout.left + ringLayout.right) / 2;
     this.board.mesh.position.set(cx, RING.boardHeight, ringLayout.far - RING.boardSetback);
+    this.board.mesh.rotation.set(0, 0, 0); // plane normal +z → faces the near side
     this.card.mesh.position.set(cx, 1.78, (ringLayout.near + ringLayout.far) / 2);
-
-    // Board + card always face the fighter reading them (yaw only).
-    _look.copy(tracked.head);
-    for (const m of [this.board.mesh, this.card.mesh]) {
-      m.lookAt(_look.x, m.position.y, _look.z);
-    }
+    this.card.mesh.rotation.set(0, 0, 0);
 
     const inShow = match.screen !== 'foyer' && match.screen !== 'lobby';
     this.board.mesh.visible = inShow;

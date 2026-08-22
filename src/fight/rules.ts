@@ -37,6 +37,12 @@ export interface Judgement {
   strength: number;
 }
 
+/** A defending glove for the clash check: where it is, how fast it moves. */
+export interface Glove {
+  pos: Vector3;
+  speed: number;
+}
+
 /** Speed → 0..1 punch strength (saturates at PUNCH.maxSpeed). */
 export function punchStrength(speed: number): number {
   return Math.min(1, Math.max(0, (speed - PUNCH.hitSpeed) / (PUNCH.maxSpeed - PUNCH.hitSpeed)));
@@ -46,25 +52,26 @@ const _toHead = new Vector3();
 const _toGlove = new Vector3();
 
 /**
- * The victim's call on an arriving hit. `head` and the gloves are the
- * VICTIM's tracked points (their real body); `damageScale` lets the bot
- * difficulty thin its own punishment.
+ * The victim's call on an arriving hit. `head` is the VICTIM's real head;
+ * the gloves are their GEL fists with their live speeds; `damageScale`
+ * lets the bot difficulty thin its own punishment.
+ *
+ * THE CLASH LAW: blocking is MEETING their strike with your own. A hit is
+ * blocked only when one of the defender's fists is near the contact AND
+ * moving at strike speed itself — two punches cancelling in the air. A
+ * parked guard soaks nothing: hands still, chin pays.
  */
 export function judgeIncoming(
   hit: IncomingHit,
   head: Vector3,
-  gloveL: Vector3,
-  gloveR: Vector3,
+  gloveL: Glove,
+  gloveR: Glove,
   damageScale = 1,
 ): Judgement {
   const strength = punchStrength(hit.speed);
   const headshot = _toHead.copy(hit.point).sub(head).length() < PUNCH.headRadius;
 
-  // THE BLOCK: a glove near the contact point — or standing on the line
-  // between the contact and the head (the classic high guard) — soaks it.
-  const blocked =
-    gloveNear(gloveL, hit) || gloveNear(gloveR, hit) ||
-    (headshot && (gloveOnLine(gloveL, hit, head) || gloveOnLine(gloveR, hit, head)));
+  const blocked = clashes(gloveL, hit) || clashes(gloveR, hit);
 
   let damage = (PUNCH.dmgBase + strength * PUNCH.dmgScale) * damageScale;
   if (headshot) damage *= PUNCH.headMul;
@@ -73,21 +80,10 @@ export function judgeIncoming(
   return { blocked, headshot, damage, strength };
 }
 
-function gloveNear(glove: Vector3, hit: IncomingHit): boolean {
-  return _toGlove.copy(glove).sub(hit.point).length() < PUNCH.blockRadius;
-}
-
-/** Is the glove parked on the contact→head line (a raised guard)? */
-function gloveOnLine(glove: Vector3, hit: IncomingHit, head: Vector3): boolean {
-  _toHead.copy(head).sub(hit.point);
-  const len = _toHead.length();
-  if (len < 1e-3) return false;
-  _toHead.divideScalar(len);
-  _toGlove.copy(glove).sub(hit.point);
-  const along = _toGlove.dot(_toHead);
-  if (along < 0 || along > len) return false;
-  _toGlove.addScaledVector(_toHead, -along);
-  return _toGlove.length() < PUNCH.blockRadius * 0.85;
+/** The clash: this glove is near the contact AND striking itself. */
+function clashes(glove: Glove, hit: IncomingHit): boolean {
+  if (glove.speed < PUNCH.clashSpeed) return false;
+  return _toGlove.copy(glove.pos).sub(hit.point).length() < PUNCH.blockRadius;
 }
 
 /**

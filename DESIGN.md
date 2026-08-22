@@ -141,6 +141,18 @@ Three tracked points become 20 anchors:
   underdamped springs put the wobble back). Poison law throughout: a NaN
   in any channel is swallowed, never integrated.
 
+## STATURE (embody)
+
+Every fighter stands the same native height: the embodiment multiplies
+your local eye height by 1.385 (clamped), so the derived column tops out
+where the AI's authored head does (~2.2 m world) whatever your real
+height — and crouching still crouches, proportionally. Your eyes ride at
+your own upper chest; first-person masks the whole upper column (head,
+neck, chest, belly, shoulders — an elbow face-clearance push keeps
+cross-body swings out of your eyes too), leaving you elbows-to-fists
+and the lower body. The opponent, the mirror and the jumbotron see all
+of you.
+
 ## The judging law (fight/rules.ts)
 
 Each headset is the only honest witness of its own body:
@@ -151,10 +163,13 @@ Each headset is the only honest witness of its own body:
   you punch), at speed, armed, and INTO the surface — the field's own
   slope a hand-width back along the travel says "came from outside" (a
   centre-direction dot test degenerates to noise once a fist is deep).
-- **The VICTIM judges OUTCOME.** The block check runs against THEIR real
-  gloves (glove near the contact, or guarding the line into the head),
-  and their health broadcast is authoritative. Health 0 is self-declared;
-  the host formalises the count.
+- **The VICTIM judges OUTCOME.** THE CLASH is the only block: one of the
+  victim's gel fists near the contact AND moving at clashSpeed+ — meeting
+  the strike with a strike. A parked guard soaks nothing (the old passive
+  guard/line block is gone). Their health broadcast is authoritative;
+  health 0 is self-declared, the host formalises the count. The practice
+  bot clashes only while it is itself mid-swing — the same law you live
+  under.
 - **Anti-flail**: speed gate (1.6 m/s), per-hand cooldown (0.28 s), and
   the RETRACT re-arm — after scoring, a hand must pull 12 cm clear of the
   surface before it may score again. An advancing opponent engulfing your

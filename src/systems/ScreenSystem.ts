@@ -2,11 +2,11 @@
  * ScreenSystem — the two live surfaces (config.SCREENS):
  *
  *  - THE JUMBOTRON: a broadcast of the match, mounted in the air above
- *    the NEAR side of your ring (the mirror-image of the scoreboard's
- *    far-side mount, following the same side when you drag the ring).
- *    A fixed ringside camera at the LEFT ropes shoots the classic
- *    side-on angle; you glance back between exchanges and see the whole
- *    fight — both goops, the ropes, the board — as television.
+ *    the RIGHT side of your ring (a side wall — the scoreboard owns the
+ *    far one), following that side when you drag the ring. A fixed
+ *    ringside camera at the LEFT ropes shoots the classic side-on angle
+ *    into it; a glance right mid-exchange shows the whole fight — both
+ *    goops, the ropes, the board — as television.
  *
  *  - THE MIRROR: a selfie panel beside the foyer menu. Your first-person
  *    body hides its own head and fades itself down — right for your
@@ -175,26 +175,20 @@ export class ScreenSystem extends createSystem({}) {
     const scene = this.scene as unknown as Scene;
     const s = match.screen;
 
-    /* ── THE JUMBOTRON: alive for the fight, mounted over the near side ── */
+    /* ── THE JUMBOTRON: alive for the fight, mounted over the RIGHT side ── */
     const fightOn = s === 'countdown' || s === 'round' || s === 'ko' || s === 'rest';
     this.jumbo.group.visible = fightOn;
     if (fightOn) {
       const J = SCREENS.jumbotron;
       const cx = (ringLayout.left + ringLayout.right) / 2;
       const cz = (ringLayout.near + ringLayout.far) / 2;
-      this.jumbo.group.position.set(cx, J.height, ringLayout.near + J.setback);
-      // Yaw-billboard to the reader (mounted position, readable facing).
-      this.jumbo.group.rotation.set(
-        0,
-        Math.atan2(
-          tracked.head.x - this.jumbo.group.position.x,
-          tracked.head.z - this.jumbo.group.position.z,
-        ),
-        0,
-      );
+      this.jumbo.group.position.set(ringLayout.right + J.setback, J.height, cz);
+      // FIXED, facing the ring (−x). Furniture doesn't track heads.
+      this.jumbo.group.rotation.set(0, -Math.PI / 2, 0);
 
       if (renderer && this.jumbo.due()) {
-        // Ringside camera at the LEFT ropes, classic side-on broadcast.
+        // Ringside camera at the LEFT ropes shooting INTO the screen's
+        // wall — the classic side-on broadcast.
         const cam = this.jumbo.camera;
         cam.position.set(ringLayout.left - 1.15, 1.9, cz);
         cam.lookAt(cx, 1.15, cz);
@@ -208,15 +202,16 @@ export class ScreenSystem extends createSystem({}) {
     this.mirror.group.visible = menuOn;
     if (menuOn) {
       const M = SCREENS.mirror;
-      // Beside the foyer panel (which floats at (0, 1.42, −0.98)), angled in.
+      // Beside the foyer panel (which floats at (0, 1.42, −0.98)), angled
+      // toward the spawn — FIXED, like a mirror on a stand.
       this.mirror.group.position.set(-1.02, 1.32, -0.78);
-      this.mirror.group.lookAt(tracked.head.x, 1.32, tracked.head.z);
+      this.mirror.group.rotation.set(0, Math.atan2(1.02, 0.98), 0);
 
       const mine = fightersView.mine;
       if (renderer && mine && this.mirror.due()) {
         // Selfie framing: from the mirror toward your body, full height.
         const cam = this.mirror.camera;
-        _at.set(tracked.head.x, 0.98, tracked.head.z);
+        _at.set(tracked.head.x, 1.12, tracked.head.z);
         _dir.copy(_at).sub(this.mirror.group.position);
         _dir.y = 0;
         const d = Math.max(_dir.length(), 1e-3);

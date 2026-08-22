@@ -68,12 +68,15 @@ export const PUNCH = {
   /** Head shots (contact within headRadius of the victim's head) hit harder. */
   headMul: 1.4,
   headRadius: 0.45,
-  /** A blocked hit lands only this fraction — a good guard is nearly free. */
+  /** A blocked hit lands only this fraction — a clean parry is nearly free. */
   blockMul: 0.12,
-  /** The block: a defending GEL GLOVE within this of the contact point (or
-   *  of the line into the head) turns a hit into a block. Judged by the
-   *  DEFENDER — only your own headset knows where your gloves truly are. */
-  blockRadius: 0.44,
+  /** THE CLASH: blocking is MEETING their strike with your own. A hit is
+   *  blocked when one of the defender's gel fists is within blockRadius of
+   *  the contact AND moving at clashSpeed+ — two strikes cancelling, not a
+   *  parked guard soaking. Judged by the DEFENDER (only your own headset
+   *  knows your gloves). */
+  blockRadius: 0.5,
+  clashSpeed: 1.2,
   /** Ring out of the well: how deep (m) into the surface still counts as
    *  the contact crossing (the field test threshold). */
   contactDepth: 0.06,
@@ -154,7 +157,8 @@ export const PERF = {
  * Two live render-to-texture surfaces, both cheap by construction (small
  * targets, skipped frames, only alive on the screens that need them):
  *  - THE JUMBOTRON: a broadcast-angle view of the match, mounted above
- *    the NEAR side of your ring (opposite the scoreboard).
+ *    the RIGHT side of your ring (a side wall — the far one is the
+ *    scoreboard's).
  *  - THE MIRROR: a selfie panel beside the foyer menu showing YOUR goop
  *    in full — head included (the mirror renders the full pack the
  *    first-person view masks).
@@ -168,7 +172,7 @@ export const SCREENS = {
     resY: 252,
     /** Capture every Nth frame. */
     everyN: 3,
-    /** Mount: back beyond the NEAR ropes, up high (mirrors the board). */
+    /** Mount: out beyond the RIGHT ropes, up high (the board's twin). */
     setback: 1.0,
     height: 2.5,
   },
@@ -180,8 +184,8 @@ export const SCREENS = {
     resY: 500,
     everyN: 2,
     /** Camera distance from your body (m) and its vertical FOV — framed
-     *  for the WHOLE goop, head dome to puddle skirt. */
-    camDist: 2.6,
+     *  for the WHOLE opponent-tall goop, head dome to puddle skirt. */
+    camDist: 3.1,
     fov: 58,
   },
 };
@@ -228,9 +232,9 @@ export interface GoopTint {
  */
 export const BOT = {
   levels: [
-    { name: 'SPAR', tempo: 1.65, rest: 1.7, damageMul: 0.55, hp: 80, moveMul: 0.8 },
-    { name: 'CONTENDER', tempo: 1.25, rest: 1.15, damageMul: 0.8, hp: 100, moveMul: 1 },
-    { name: 'CHAMP', tempo: 0.95, rest: 0.75, damageMul: 1.0, hp: 120, moveMul: 1.2 },
+    { name: 'SPAR', tempo: 1.65, rest: 1.7, damageMul: 0.55, hp: 90, moveMul: 0.8 },
+    { name: 'CONTENDER', tempo: 1.25, rest: 1.15, damageMul: 0.8, hp: 140, moveMul: 1 },
+    { name: 'CHAMP', tempo: 0.95, rest: 0.75, damageMul: 1.0, hp: 240, moveMul: 1.2 },
   ],
   /** How far from the player the bot likes to stand (m), scaled per style.
    *  Sized for the big bodies + amplified reach: fights happen at range. */

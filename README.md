@@ -18,8 +18,13 @@ but nothing ever tears off. ONE PIECE is absolute.
 **THE REACH** (the Underdogs move): your gel fist IS your hand while it
 guards, and runs out past your knuckles as you commit — a full-arm punch
 throws it over a metre beyond your reach, the arm roping out thick behind
-it. Fights happen at range, guards happen at your chin, and the judge
-scores the fist you actually watched land.
+it. Fights happen at range, and the judge scores the fist you actually
+watched land.
+
+**STATURE**: every fighter stands the same heavyweight height (~2.2 m),
+whatever the human inside measures — your eyes ride at your own upper
+chest, with the column above masked from your view so you see the fight.
+The mirror and your opponent see all of you.
 
 The gel tech is vendored from the GOOP lineage (GOOP → FIRE FIGHT →
 RAVE RAID) and evolved here: multi-pin kinematics for embodiment, reach
@@ -37,8 +42,10 @@ game over a dark backdrop.
 
 Rounds of 90 seconds, three of them, corner rests where both fighters slump
 into breathing globs, a ten count when someone's health hits the mat, and a
-generative techno set that runs hotter as the bout gets desperate — no audio
-files shipped; every sound in the game is synthesised at runtime.
+soundtrack lifted whole from DANCE (the sibling repo whose gel this game
+wears): CHILL spins the foyer, and fight night deals COMBAT, BREAKCORE,
+DYNASTY or FUSION off the bout seed. Every sound EFFECT is still
+synthesised at runtime.
 
 ## Quick start
 
@@ -75,9 +82,10 @@ real knees. The judge is honest:
 - damage is tuned for **long fights**: a clean connection takes ~3–7 of
   100 health, so bouts are won over dozens of exchanges and most rounds go
   to the cards (round damage decides them);
-- **head shots** hit harder; a gel glove near the contact — or guarding the
-  line into your head — turns a hit into a **block** at ~12% chip damage.
-  Your guard is judged where YOUR headset sees your gloves;
+- **head shots** hit harder. **THE CLASH**: blocking is MEETING their
+  strike with one of your own — a fist near the incoming contact AND
+  moving at strike speed cancels it to ~12% chip damage. A parked guard
+  soaks nothing: hands still, chin pays;
 - slow contact is a *poke*: it shoves the gel around and wobbles, for free.
 
 Around the ring: the **scoreboard** hangs beyond your far ropes, a

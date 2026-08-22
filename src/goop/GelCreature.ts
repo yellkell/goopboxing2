@@ -195,9 +195,20 @@ export class GelCreature {
     this.group.add(this.shadow);
 
     if (this.firstPerson) {
-      // Your own head is not for your own eyes.
+      // STATURE puts your eyes at your own upper chest — the whole upper
+      // column is masked from your render (the opponent, the mirror and
+      // the jumbotron all still see it; the pack-level mask is render-only
+      // and packedAll ignores it).
       this.sim.renderSkip[A.HEAD] = 1;
       this.sim.renderSkip[A.NECK] = 1;
+      this.sim.renderSkip[A.CHEST_L] = 1;
+      this.sim.renderSkip[A.CHEST_R] = 1;
+      this.sim.renderSkip[A.BELLY] = 1;
+      // …and the shoulders: at crouched statures they sit AT eye height.
+      // Your own view keeps elbows-to-fists (the boxing view) + the lower
+      // body; everyone else sees all of you.
+      this.sim.renderSkip[A.SHOULDER_L] = 1;
+      this.sim.renderSkip[A.SHOULDER_R] = 1;
     }
 
     // The sim narrates; the creature makes the noises and the mess.

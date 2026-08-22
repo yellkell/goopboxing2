@@ -15,6 +15,7 @@ import { launchXR, SessionMode, World } from '@iwsdk/core';
 import { Color, type WebGLRenderer } from 'three';
 import { PERF } from './config.js';
 import { ensureAudio } from './audio/sfx.js';
+import { menuMusic } from './audio/jukebox.js';
 import { ArenaSystem } from './systems/ArenaSystem.js';
 import { FighterSystem, fightersView } from './systems/FighterSystem.js';
 import { FightSystem, fightView } from './systems/FightSystem.js';
@@ -96,6 +97,7 @@ World.create(container, {
     enterButton.addEventListener('click', () => {
       enterButton.setAttribute('disabled', '');
       ensureAudio(); // unlock the AudioContext inside the tap gesture
+      menuMusic(); // CHILL takes the foyer (stolen from DANCE, see jukebox)
       const mode = arSupported ? SessionMode.ImmersiveAR : SessionMode.ImmersiveVR;
       world.scene.background = arSupported ? null : new Color(0x030503);
       launchXR(world, { sessionMode: mode });

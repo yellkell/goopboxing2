@@ -302,8 +302,10 @@ const act3 = await page.evaluate(async () => {
   out.hpDrop = hpBefore - g.match.me.health;
   out.victimJudged = out.hpDrop > 4;
 
-  // …and blocked when my glove guards the line.
-  g.drive(0, 1.62, 0, 0, -0.05, 1.55, -0.15, 0.05, 1.5, -0.15);
+  // …and blocked when I MEET the strike with one of my own — THE CLASH:
+  // gloves near the incoming contact AND moving at strike speed. A parked
+  // guard no longer soaks anything.
+  g.drive(0, 1.62, 0, 0, -0.05, 1.55, -0.15, 0.05, 1.5, -0.15, 3.2, 3.2);
   await frames(3);
   const hpBefore2 = g.match.me.health;
   peer.event({ t: 'hit', p: [0, 1.62, -2 * spawnBack], d: [0, 0, 1], s: 6 });
@@ -328,7 +330,7 @@ check(act3.roundStarted, 'online bout reaches the round');
 check(act3.posesOut, 'poses stream out (13 floats)');
 check(act3.mirrored, `peer pose mirrors across the ring (err ${act3.mirrorErr?.toFixed(2)} m)`);
 check(act3.victimJudged, `incoming hit judged by my gloves (−${act3.hpDrop?.toFixed(1)} hp)`);
-check(act3.blockJudged, `guarded hit blocks (−${act3.blockDrop?.toFixed(1)} hp vs −${act3.hpDrop?.toFixed(1)})`);
+check(act3.blockJudged, `meeting the strike CLASH-blocks (−${act3.blockDrop?.toFixed(1)} hp vs −${act3.hpDrop?.toFixed(1)})`);
 check(act3.stateSent, 'authoritative self-state broadcast');
 check(act3.foldsHome, 'peer leaving folds back to the foyer');
 

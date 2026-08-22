@@ -18,7 +18,7 @@ import { createSystem, InputComponent } from '@iwsdk/core';
 import { Vector3, type Object3D } from 'three';
 import { GOOPS, MUSIC } from '../config.js';
 import * as sfx from '../audio/sfx.js';
-import { beatNow, setRunning } from '../audio/techno.js';
+import { beatNow, setRunning } from '../audio/jukebox.js';
 import { match } from '../fight/state.js';
 import { buildStage, type StageRig } from '../arena/stage.js';
 import {
